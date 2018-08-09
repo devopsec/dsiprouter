@@ -13,7 +13,7 @@ SSL_CERT = ""
 # dSIPRouter internal settings
 
 VERSION = 0.41
-DEBUG = True
+DEBUG = False
 
 # MySQL settings for kamailio
 
@@ -42,12 +42,19 @@ FLT_PBX = 9
 DOMAIN = 'sip.dsiprouter.org'
 
 # Teleblock Settings
+
 TELEBLOCK_GW_ENABLED = 0
 TELEBLOCK_GW_IP = '66.203.90.197'
 TELEBLOCK_GW_PORT = '5066'
 TELEBLOCK_MEDIA_IP = ''
 TELEBLOCK_MEDIA_PORT = ''
 
+
+# Flowroute Settings
+
+# auth info for flowroute accnt
+FLOWROUTE_ACCESS_KEY = ""
+FLOWROUTE_SECRET_KEY = ""
 
 # Network Settings
 

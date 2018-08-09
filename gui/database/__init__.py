@@ -1,5 +1,4 @@
 from enum import Enum
-
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, MetaData, Table, Column, String, join, Integer, ForeignKey, select
 from sqlalchemy.orm import mapper, sessionmaker
@@ -44,8 +43,10 @@ class Address(object):
     Documentation: `address table <https://kamailio.org/docs/db-tables/kamailio-db-4.4.x.html#gen-db-address>`_
     """
 
-    def __init__(self, name, ip_addr, mask, type):
+    def __init__(self, name, ip_addr, mask, type, gwgroup=None):
         self.tag = "name:" + name
+        if gwgroup is not None:
+            self.tag += ",gwgroup:" + gwgroup
         self.ip_addr = ip_addr
         self.mask = mask
         self.grp = type
