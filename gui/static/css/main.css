@@ -1,3 +1,49 @@
+/* custom icons */
+@font-face {
+  font-family: 'icomoon';
+  src:  url('/static/fonts/icomoon.eot?jnwfsx');
+  src:  url('/static/fonts/icomoon.eot?jnwfsx#iefix') format('embedded-opentype'),
+    url('/static/fonts/icomoon.ttf?jnwfsx') format('truetype'),
+    url('/static/fonts/icomoon.woff?jnwfsx') format('woff'),
+    url('/static/fonts/icomoon.svg?jnwfsx#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="icon-"], [class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'icomoon' !important;
+  speak: none;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-flowroute:before {
+  content: "\e905";
+}
+.icon-asterisk:before {
+  content: "\e903";
+}
+.icon-kamailio:before {
+  content: "\e904";
+}
+.icon-fusionpbx_full:before {
+  content: "\e900";
+}
+.icon-gryphon:before {
+  content: "\e901";
+}
+.icon-fusionpbx:before {
+  content: "\e902";
+}
+
 .wrap {
   position: relative;
 }
@@ -285,6 +331,7 @@ a.currentlink {
 
 .label-toggle {
   margin-left: 10px;
+  width: 100%;
 }
 
 .container {
@@ -298,60 +345,6 @@ a.currentlink {
   float: right;
 }
 
-.navbar {
-  background: #FFFFFF;
-}
-
-.navbar > ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.navbar > ul > li {
-  -webkit-transition: all 0.2s cubic-bezier(0.2, 0.6, 0.4, 1);
-  -moz-transition: all 0.2s cubic-bezier(0.2, 0.6, 0.4, 1);
-  -ms-transition: all 0.2s cubic-bezier(0.2, 0.6, 0.4, 1);
-  -o-transition: all 0.2s cubic-bezier(0.2, 0.6, 0.4, 1);
-  transition: all 0.2s cubic-bezier(0.2, 0.6, 0.4, 1);
-  background: rgba(0, 0, 0, 0.05);
-  margin: 0 2px;
-}
-
-.navbar > ul > li a {
-  -webkit-transition: all 0.2s ease;
-  -moz-transition: all 0.2s ease;
-  -ms-transition: all 0.2s ease;
-  -o-transition: all 0.2s ease;
-  transition: all 0.2s ease;
-  -webkit-border-radius: 4px;
-  -moz-border-radius: 4px;
-  -ms-border-radius: 4px;
-  -o-border-radius: 4px;
-  border-radius: 4px;
-  border: 2px solid transparent;
-  background: rgba(255, 255, 255, 0.75);
-}
-
-.navbar > ul > li a:hover,
-.current-navlink.current-navlink:hover {
-  border: 2px solid rgba(255, 129, 0, 0.8);
-  color: #0fafff;
-}
-
-.navbar > ul > li a:active,
-.current-navlink.current-navlink:active {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-.current-navlink.current-navlink {
-  border-width: 2px;
-  border-style: hidden hidden solid hidden;
-  border-color: rgba(255, 129, 0, 1.0);
-  color: #3355ff;
-  background: rgba(255, 255, 255, 1.0);
-}
-
 .table-centered th,
 .table-centered td {
   text-align: center;
@@ -359,6 +352,14 @@ a.currentlink {
 }
 
 /* horizontal wrapper for block elements */
+.wrapper-horizontal {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: row;
+}
 .wrapper-horizontal > div,
 .wrapper-horizontal > h1,
 .wrapper-horizontal > h2,
@@ -386,6 +387,14 @@ a.currentlink {
 }
 
 /* vertical wrapper for block elements */
+.wrapper-vertical {
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -webkit-flex;
+  display: flex;
+  flex-direction: column;
+}
 .wrapper-vertical > div,
 .wrapper-vertical > h1,
 .wrapper-vertical > h2,
@@ -412,7 +421,49 @@ a.currentlink {
   display: block;
 }
 
+.centered {
+  margin: auto;
+  align-items: center;
+  justify-content: center;
+}
+.centered > * {
+  text-align: center;
+}
+
+.edge-centered {
+  margin: auto;
+  align-items: center;
+  justify-content: space-between;
+}
+.edge-centered > * {
+  text-align: center;
+}
+
+.equal-centered {
+  margin: auto;
+  align-items: center;
+  justify-content: space-evenly;
+}
+.equal-centered > * {
+  text-align: center;
+}
+
 .hidden {
   display: none;
   visibility: hidden;
+}
+
+/* add to parent elem */
+.resizable {
+  overflow: hidden;
+}
+.resizable > * {
+  overflow: auto;
+  resize: both;
+}
+
+/* fix bootstrap modals when stacking */
+.modal-open.modal {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
