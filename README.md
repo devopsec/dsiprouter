@@ -1,230 +1,114 @@
-## dSIPRouter by dOpenSource | a Flyball Company [ Built in Detroit ]
+# dSIPRouter Platform
+
+> VoIP Service Management Simplified
+
+## Supported Features
+
+- Carrier Management
+  - Manage carriers as a group
+- Endpoint Management
+  - Manage endpoints as a group
+  - Call Limiting per Endpoint Group
+  - Call Detail Records generation per Endpoint Group
+- High Availablity
+  - Mysql Active-Active replication
+  - Pacemaker / Corosync Active-Passive floating IP
+  - Consul DNS Load-balancing and DNS Failover
+  - dSIPRouter cluster synchronization
+  - Kamailio DMQ replication
+- Notification System
+  - Over Call Limit Notifications
+  - Endpoint Failure Notifications
+  - Call Detail Record Notifications
+- Enhanced DID Management
+  - DID Failover to a Carrier/Endpoint Group or DID
+  - DID Hard Forwarding to a Carrier/Endpoint Group or DID
+  - Flowroute DID synchronization
+- Enhanced Route Management
+  - FusionPBX Domain Routing Enhancements
+  - Outbound / Inbound DID prefix routing
+  - Least Cost Locality Outbound routing
+  - Load balancing / sequential routing via groups
+  - Integration with your own custom Kamailio routes
+  - E911 Priority routing
+  - Local Extension routing
+  - Voicemail routing
+- Security
+  - TLS Enabled by Default
+  - Rate-limiting / DOS protection
+  - Teleblock blacklist support
+- Microsoft Teams Support (Subscription Required)
+- WebSockets Enabled by Default
+- Kamailio 5.3 Support
+- RTPEngine Version 6.1 Support
+
+## What is dSIPRouter?
 
 dSIPRouter allows you to quickly turn [Kamailio](https://www.kamailio.org/) into an easy to use SIP Service Provider platform, which enables two basic use cases:
 
-- **SIP Trunking services:** Provide services to customers that have an on-premise PBX such as FreePBX, FusionPBX, Avaya, etc.  We have support for IP and credential based authentication.
+- **SIP Trunking services:**
+Provide services to customers that have an on-premise PBX such as FreePBX, FusionPBX, Avaya, etc.
+We have support for IP and credential based authentication.
 
-- **Hosted PBX services:** Proxy SIP Endpoint requests to a multi-tenant PBX such as FusionPBX or single-tenant such as FreePBX. We have an integration with FusionPBX that make this really easy and scalable!
+- **Hosted PBX services:**
+Proxy SIP Endpoint requests to a multi-tenant PBX such as FusionPBX or single-tenant such as FreePBX.
+We have an integration with FusionPBX that make this really easy and scalable!
+
+- **Microsoft Teams Direct Routing:**
+We can provide SBC functionality that allows dSIPRouter to interconnect your existing voice infrastructure or VoIP carrier to your Microsoft Teams environment.
+
+- **Web Management Services**
+Provide customers the ability to manage signaling, routes, security, CRM, CDR's, logging, and more from the dSIPRouter GUI.
+We also make these services available to developers through the dSIPRouter API.
 
 **Follow us at [#dsiprouter](https://twitter.com/dsiprouter) on Twitter to get the latest updates on dSIPRouter**
 
+### Project Web Site
+
+Check out our official website [dsiprouter.org](http://dsiprouter.org)
+
 ### Demo System
 
-You can checkout our demo system, which is located here:
+Try out our demo system [demo.dsiprouter.org](https://demo.dsiprouter.org:5000/)
 
-[http://demo.dsiprouter.org:5000](http://demo.dsiprouter.org:5000)
+Demo system GUI Credentials:
+- username: `admin`
+- password: `ZmIwMTdmY2I5NjE4`
 
-username: admin
+Demo system API Credentials:
+- bearer token: `9lyrny3HOtwgjR6JIMwRaMej9LijIS835zhVbD8ywHDzXT07Xm6vem1sgfvWkFz3`
 
-password: ZmIwMTdmY2I5NjE4
+### HA Installation Notes
 
-### Sponsors
+The highly available mysql and pacemaker modules are installed seperately at this time:
 
-We would like to say thank you to [Skyetel](http://skye.tel/dsiprouter) for believing in us and becoming our first sponsor. 
+- Both modules are deployed from an edge server that must connect through ssh to all nodes
+- Currently 2 node clusters have been thoroughly tested but there is no limit to cluster size.
 
-![Skyetel Logo](/docs/images/skyetel_logo.png)
+Supported SSH authentication methods for cluster configuration:
 
+1. public key
+2. password
 
-### Supported Platforms:
+### Documentation
 
-We have to limit our offiical support to Debian Stretch with Kamailio 5.1 because we just implemented a new framework for supporting multiple operating systems and different versions of Kamailio and RTPProxy.  But, we only had time to really test Debian Stretch.  Please contribute to the install process by committing code to the project or [purchasing support](https://dopensource.com/shop) so that we can provide more officially supported platform variations and to add additional features to make Kamailio and RTPProxy much easier to learn and use.
+You can find our documentation online: [dSIPRouter Documentation](https://dsiprouter.readthedocs.io/en/latest)
+For a list of updates and changes refer to our [Changelog](CHANGELOG.md)
 
-#### OS Support
+### Contributing
 
-**Debian Stretch (tested on 9.4)**
+See the [Contributing Guidelines](CONTRIBUTING.md) for more details
+A current list of contributors can be found [here](CONTRIBUTORS.md)
 
-Kamailio will be automatically installed along with dSIPRouter.  Must be installed on a fresh install of Debian Stretch.  You will not be prompted for any information.  It will take anywhere from 4-9 minutes to install - depending on the processing power of the machine. You can secure the Kamailio database after the installation.
+### Support
 
-#### Kamailio Versions
-- Kamailio 5.1 
+Free Support: [dSIPRouter Question & Answer Forum](https://groups.google.com/forum/#!forum/dsiprouter)
+Paid Support: [dSIPRouter Support](https://dsiprouter.org/#fh5co-support-section)
 
-#### Database Support
+### Training
 
-- MariaDB 10.x
-
-### Prerequisites:
-
-- Must run this as the root user (you can use sudo)
-- git and curl needs to be installed
-- python version 3.4 or older
-
-### Non-Supported Platforms (but might work)
-
-**Debian Jessie 8.x:**
-
-- Kamailio will be automatically installed along with dSIPRouter.  Just click "enter" and "y" to not have a ROOT password on mysql and to accept all of the default settings. 
-
-**On CentOS 7.x:**
-
-- Kamailio needs to be installed with the default kamailio configuration directory
-- You will need your kamailio database credentials.
-
-
-### Installing and Running It:
-
-There are three ways to install dSIPRouter:
-
-- Proxy SIP Traffic Only (Don't Proxy audio (RTP) traffic) 
-- Proxy SIP Traffic and Audio when it detects a SIP Agent is behind NAT
-- Proxy SIP Traffic, Audio and it configures the system to work properly when the PBX's and dSIPRouter are behind a NAT.
-
-The steps to install each configuration is below.  Note, there are one line versions of the install in each section below.  The average install time is between 4-9 minutes depending on the resources on your vm/server.
-
-#### Install (Don't Proxy audio (RTP) traffic)
-
-```
-apt-get update
-apt-get install -y git curl
-cd /opt
-git clone https://github.com/dOpensource/dsiprouter.git
-cd dsiprouter
-./dsiprouter.sh install
-```
-or the one line version
-
-```
-apt-get update;apt-get install -y git curl;cd /opt;git clone https://github.com/dOpensource/dsiprouter.git;cd dsiprouter;./dsiprouter.sh install
-```
-
-Once the install is complete, dSIPRouter will automatically start MySQL, Kamailio and the UI.
-
-#### Install (Proxy audio (RTP) traffic)
-
-If you need to proxy RTP traffic then add the -rtpengine parameter.  So, the command to install dSIPRouter and the RTPEngine would be
-
-```
-apt-get update
-apt-get install -y git curl
-cd /opt
-git clone https://github.com/dOpensource/dsiprouter.git
-cd dsiprouter
-./dsiprouter.sh install -rtpengine
-```
-
-or the one line version
-
-```
-apt-get update;apt-get install -y git curl;cd /opt;git clone https://github.com/dOpensource/dsiprouter.git;cd dsiprouter;./dsiprouter.sh install -rtpengine
-```
-
-Once the install is complete, dSIPRouter will automatically start MySQL, Kamailio and the UI.  But, you will need to reboot the physical server or virtual machine for the RTP Engine to start.  This is a known [issue](https://github.com/dOpensource/dsiprouter/issues/42)   
-
-#### Install (Proxy audio (RTP) traffic with PBX and dSIPRouter behind NAT)
-
-If you have a requirement where the PBX's and dSIPRouter are behind NAT then use the steps below, which are the same as above, but you will add a -servernat parameter.   
-
-```
-apt-get update
-apt-get install -y git curl
-cd /opt
-git clone https://github.com/dOpensource/dsiprouter.git
-cd dsiprouter
-./dsiprouter.sh install -rtpengine -servernat
-```
-
-or the one line version
-
-```
-apt-get update;apt-get install -y git curl;cd /opt;git clone https://github.com/dOpensource/dsiprouter.git;cd dsiprouter;./dsiprouter.sh install -rtpengine -servernat
-```
-
-Once the install is complete, dSIPRouter will automatically start MySQL, Kamailio and the UI.  But, you will need to reboot the physical server or virtual machine for the RTP Engine to start.  This is a known [issue](https://github.com/dOpensource/dsiprouter/issues/42)   
-
-### Login 
-
-Open a broswer and go to `http://[ip address of your server]:5000`
-
-The username and the dynamically generated password is displayed after the install
-
-### Stopping dSIPRouter:
-```
-./dsiprouter.sh stop
-```
-
-### Starting dSIPRouter:
-```
-./dsiprouter.sh start
-```
-
-### Restarting dSIPRouter:
-```
-./dsiprouter.sh restart
-```
-
-### Run At Startup:
-
-Put this line in /etc/rc.local
-
-```
-<your directory>/dsiprouter.sh start
-```
-* We will provide a systemctl startup/stop script in the near future
-
-### Uninstall
-```
-./dsiprouter.sh uninstall
-```
-
-### Gryphon Teleblock Support
-
-The Gryphon Teleblock services allows a call center to stay in compliance with "DO NOT CALL" lists.  When enabled,
-calls are routed to their service.  The service will return a SIP return code.  If the call is on the "DO NOT CALL" list a SIP return code of 403  will be returned and dSIPRouter will send a SIP error message back to the user or the call can be routed to a media server, which will play a message to the user. A SIP return code of 499 means that the call is NOT on the "DO NOT CALL" list and dSIPRouter will route the call to the carrier you have defined.
-
-The settings for this can be found in "Global Outbound Routes".  Note, you can enable this service from GUI and test that it's working as expected.  If you want the service enabled when Kamailio restarts you need to specify the settings in your /etc/kamailio/kamailio.cfg.  The default settings are:
-
-```
-teleblock.gw_enabled = 0 desc "Enable Teleblock support"
-teleblock.gw_ip = "66.203.90.197" desc "Teleblock IP"
-teleblock.gw_port = "5066" desc "Teleblock Port"
-teleblock.media_ip = "" desc "Teleblock media ip"
-teleblock.media_port = "" desc "Teleblock media port"
-```
-
-Change the teleblock.gw_enabled value to a 1, update the gateway ip and port based on what Gryphon provides you and optionally you can specify a media server ip and port that can play a pre-recorded message to a user.  
- 
-
-### Change Configuration Parameters
-
-To change the configuration settings edit `gui/settings.py` file, e.g. `vi ./gui/settings.py`
-
-* USERNAME - web gui username
-* PASSWORD - web gui password
-* DSIP_PORT - port on which web gui is running, 5000 by default
-* DOMAIN - the domain used to create usernames for PBX and Endpoint registration.  
-
-#### Gryphon Teleblock Support
-
-* TELEBLOCK_GW_ENABLED  - will enabled teleblock support in the gui
-* TELEBLOCK_GW_IP - gateway ip of the teleblock service
-* TELEBLOCK_GW_PORT - gateway port of the teleblock services
-* TELEBLOCK_MEDIA_IP - ip of a media server that will play messages when a number is on the "DO NOT CALL" list
-* TELEBLOCK_MEDIA_PORT - port of the media server
-
-You will need to restart dSIPRouter for the changes to take effect.
-
-### Screenshots
-
-#### Carrier Management Screen
-![dSIPRouter Carrier Screen](/docs/images/dsiprouter-carriers.jpg)
-
-#### PBX(s) and Endpoint Management Screen
-![dSIPRouter PBX Screen](/docs/images/dsiprouter-pbxs.jpg)
-
-#### PBX and/or Endpoint IP or Credential Based Authentication Input Screen
-![dSIPRouter PBX Screen with Auth](/docs/images/dsiprouter-pbx-auth.jpg)
-
-#### FusionPBX Domain Support
-![dSIPRouter FusionPBX Domain Support Screen](/docs/images/dsiprouter-fusionpbx_domain_support.jpg)
-
-#### Inbound Mapping Screen
-![dSIPRouter Inbound Mapping Screen](/docs/images/dsiprouter-inboundmapping.jpg)
-
-#### Outbound Routing Screen
-![dSIPRouter Outbound Routing Screen](/docs/images/dsiprouter-outboundrouting.jpg)
-
-#### Gryphon Teleblock Support
-![dSIPRouter Gryphon Teleblock Support](/docs/images/dsiprouter-teleblock.jpg)
+Details on training can be found [here](https://dopensource.com/product/dsiprouter-admin-course/)
 
 ### License
 
-* Apache License 2.0, [read more here](./LICENSE)
+- Apache License 2.0, [read more here](LICENSE)

@@ -1,18 +1,21 @@
-{% from 'util.jinja2.html' import link_tag, script_tag, tracked_link, img_tag %}
 <!DOCTYPE html>
-<html>
+{% from 'util.jinja2.html' import link_tag, script_tag, tracked_link, img_tag %}
+<html lang="en">
 
 <head>
 
   <meta charset="utf-8">
   <title>dSIPRouter {% block title %}{% endblock %}</title>
 
+  <!-- inherited CSS -->
   {{ link_tag('bootstrap') }}
   {{ link_tag('bootstrap-theme') }}
   {{ link_tag('bootstrap-toggle') }}
+  {{ link_tag('datatables.min') }}
   {{ link_tag('highlight/{}'.format(highlight_theme|default('github'))) }}
   {{ link_tag('main') }}
 
+  <!-- custom CSS -->
   {% block custom_css %}
   {% endblock %}
 
@@ -29,14 +32,15 @@
           <ul class="nav navbar-nav navbar-right">
             {% if reload_required == True %}
               <button class="btn btn-warning btn-med" style="margin-top:10px;margin-right:10px" id="reloadkam"
-                      name="reloadkam" onclick="reloadkam(this)">Reload Kamailio
+                      name="reloadkam">Reload Kamailio
               </button>
             {% else %}
               <button class="btn btn-primary btn-med" style="margin-top:10px;margin-right:10px" id="reloadkam"
-                      name="reloadkam" onclick="reloadkam(this)">Reload Kamailio
+                      name="reloadkam">Reload Kamailio
               </button>
             {% endif %}
             <!-- <form id="qform" class="navbar-form pull-left" role="search">
+               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                <input type="text" class="form-control" placeholder="Search" />
              </form> -->
             <li class="dropdown movable">
@@ -73,7 +77,16 @@
           </li>
 
           <li class="nav-header">
-            <div class="link"><i class="fa fa-cloud"></i><a class="navlink" href="/pbx">PBX(s) and Endpoints</a><i
+            <div class="link"><i class="fa fa-cloud"></i><a class="navlink" href="/endpointgroups">Endpoint Groups</a><i
+                class="fa fa-chevron-down"></i></div>
+            <!-- <ul class="submenu">
+              <li><a href="/pbx">List PBX's</a></li>
+              <li><a href="/pbx?action=add">Add PBX</a></li>
+            </ul> -->
+          </li>
+
+          <li class="nav-header">
+            <div class="link"><i class="fa fa-cloud"></i><a class="navlink" href="/domains">Domains</a><i
                 class="fa fa-chevron-down"></i></div>
             <!-- <ul class="submenu">
               <li><a href="/pbx">List PBX's</a></li>
@@ -96,21 +109,36 @@
               <li><a href="/outboundroutes">Global Outbound Routes</a></li>
             </ul> -->
           </li>
+          <li class="nav-header">
+            <div class="link"><i class="fa fa-lg fa-file-image-o"></i><a class="navlink" href="/cdrs">
+              Call Detail Records</a><i class="fa fa-chevron-down"></i></div>
+            <!--<ul class="submenu">
+              <li><a href="/outboundroutes">Global Outbound Routes</a></li>
+            </ul> -->
+          </li>
+          <li class="nav-header">
+            <div class="link"><i class="fa fa-lg fa-file-image-o"></i><a class="navlink" href="#">
+             System Settings</a><i class="glyphicon glyphicon-chevron-down"></i></div>
+            <ul class="submenu">
+              <li><a href="/backupandrestore">Backup and Restore</a></li>
+              <li><a href="/certificates">Certificates</a></li>
+            </ul>
+          </li>
 
         </ul>
       </aside>
 
       <!--Body content-->
       <div class="content">
-        <div class="top-bar">
-          <div class="message-bar" style="display: none;text-align:center;">
-          </div>
+        <div class="top-bar" style="display: none;">
+          <div class="message-bar" style="text-align: center;"></div>
           <a href="#menu" class="side-menu-link burger">
             <span class='burger_inside' id='bgrOne'></span>
             <span class='burger_inside' id='bgrTwo'></span>
             <span class='burger_inside' id='bgrThree'></span>
           </a>
         </div>
+
         <section class="content-inner">
           {% block body %}
           {% endblock %}
@@ -120,20 +148,33 @@
     </div>
   </div>
 
+  <!-- inherited JS -->
   {{ script_tag('jquery') }}
+  <script type="application/javascript">
+    /* globals set in window properties */
+    Object.defineProperty(window, "GUI_BASE_URL", {
+      configurable: false,
+      writable: false,
+      value: "{{ settings.DSIP_PROTO }}" + "://" + window.location.hostname + ":" + "{{ settings.DSIP_PORT }}" + "/"
+    });
+    Object.defineProperty(window, "API_BASE_URL", {
+      configurable: false,
+      writable: false,
+      value: "{{ settings.DSIP_API_PROTO }}" + "://" + window.location.hostname + ":" + "{{ settings.DSIP_API_PORT }}" + "/api/v1/"
+    });
+  </script>
+  {{ script_tag('util') }}
+  <script type="application/javascript">
+    {% include 'includes/overrides.js' %}
+  </script>
   {{ script_tag('bootstrap') }}
   {{ script_tag('bootstrap-toggle') }}
   {{ script_tag('validator') }}
-  {{ script_tag('highlight/highlight.pack') }}
   {{ script_tag('main') }}
-
+  {{ script_tag('datatables.min') }}
+  {{ script_tag('highlight/highlight.pack') }}
   <script type="application/javascript">
-    window.RAPID = {};
     $(document).ready(function() {
-      /* query param actions */
-      if (getQueryString('action') === 'add') {
-        $('#add').modal('show');
-      }
       /* add code syntax highlighting */
       $('pre code').each(function(i, block) {
         hljs.highlightBlock(block);
@@ -141,6 +182,7 @@
     });
   </script>
 
+  <!-- custom JS -->
   {% block custom_js %}
   {% endblock %}
 
