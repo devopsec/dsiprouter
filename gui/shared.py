@@ -62,7 +62,7 @@ def rowToDict(row):
 
     if hasattr(row, '__table__'):
         for column in row.__table__.columns:
-            d[column.name] = str(getattr(row, column.name))
+            d[column.name] = getattr(row, column.name)
     elif hasattr(row, '_asdict'):
         d = row._asdict()
     elif hasattr(row, '__dict__'):
