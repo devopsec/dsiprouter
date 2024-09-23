@@ -179,7 +179,7 @@
   function createReadonlyTextArea(data, type, row, meta) {
     return '' +
       '<div class="dt-resize-height">' +
-      '  <textarea readonly>' + data.join('\n') + '</textarea>' +
+      '  <textarea ' + (data.length === 1 ? 'style="padding: 2rem 0 0;"' : 'style="padding: 1rem 0 0;"') + ' readonly>' + data.join('\n') + '</textarea>' +
       '</div>';
   }
 
