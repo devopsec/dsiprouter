@@ -636,6 +636,22 @@ function ipv6Test() {
 }
 export -f ipv6Test
 
+# $1 == ip to test
+# returns: 0 == success, 1 == failure
+function ipv4TestRFC1918() {
+    local IP="$1"
+    if [[ $IP =~ ^(10\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])|172\.(1[6-9]|2[0-9]|3[01])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])|192\.168\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.([0-9]{1,2}|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))$ ]]; then
+        return 0
+    fi
+    return 1
+}
+export -f ipv4TestRFC1918
+
+# output: all physical network interfaces on this machine
+function getPhysicalIfaces() {
+    ( cd /sys/class/net && dirname */device; )
+}
+export -f getPhysicalIfaces
 
 # $1 == [-4|-6] to force specific IP version
 # output: the internal IP for this system
@@ -735,6 +751,31 @@ function getIP() {
     printf '%s' "$IP"
 }
 export -f getIP
+
+# output: IP address on this node that can be used for cluster communications
+# notes:  find the first private IP address (reverse order) on a physical interface
+#         this is typically the secondary interface or secondary IP on the primary interface
+#         if no RFC1918 address is found use the IP associated with the default route
+# notes:  only IPv4 is supported
+function getClusterInternalIP() {
+    for IP in $(
+        for IFACE in $(getPhysicalIfaces | sort -r); do
+            ip -4 -o addr show $IFACE | awk '{split($4,a,"/"); print a[1];}'
+        done
+    ); do
+        if ipv4TestRFC1918 "$IP"; then
+            echo "$IP"
+            return 0
+        fi
+    done
+    IP="$(getInternalIP -4)"
+    [[ -n "$IP" ]] && {
+        echo "$IP"
+        return 0
+    }
+    return 1
+}
+export -f getClusterInternalIP
 
 # TODO: run requests in parallel and grab first good one (start ipv4 first)
 #       this is what we are already doing in gui/util/networking.py

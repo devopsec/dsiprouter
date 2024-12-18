@@ -124,6 +124,8 @@ EXTERNAL_IP_ADDR = ''
 EXTERNAL_IP6_ADDR = ''
 # example: sip.dsiprouter.org
 EXTERNAL_FQDN = ''
+# example: 10.0.0.1
+CLUSTER_IP_ADDR = ''
 # example: eth0
 PUBLIC_IFACE = ''
 # example: eth1

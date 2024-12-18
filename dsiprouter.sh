@@ -108,6 +108,16 @@ function setStaticScriptSettings() {
     export SRC_DIR="/usr/local/src"
     export BACKUPS_DIR="/var/backups/dsiprouter"
     IMAGE_BUILD=${IMAGE_BUILD:-0}
+    if [[ "$DISTRO" == "ubuntu" ]] && (( ${DISTRO_MAJOR_VER} >= 24 )); then
+        APT_OFFICIAL_SOURCES="/etc/apt/sources.d/ubuntu.sources"
+        APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.sources"
+    else
+        APT_OFFICIAL_SOURCES="/etc/apt/sources.list"
+        APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.list"
+    fi
+    APT_OFFICIAL_PREFS="/etc/apt/preferences"
+    APT_OFFICIAL_PREFS_BAK="${BACKUPS_DIR}/original-sources.pref"
+    APT_DSIP_CONFIG="/etc/apt/apt.conf.d/99dsiprouter"
     YUM_OFFICIAL_REPOS="/etc/yum.repos.d/official-releases.repo"
 
     # Force the installation of an Kamailio version by uncommenting
@@ -199,6 +209,8 @@ function setDynamicScriptSettings() {
         EXTERNAL_IP6_ADDR=$(getExternalIP -6)
         export EXTERNAL_IP6_ADDR=${EXTERNAL_IP6_ADDR:-$INTERNAL_IP6_ADDR}
 
+        export CLUSTER_IP_ADDR=$(getClusterInternalIP)
+
         # determine whether ipv6 is enabled
         # /proc/net/if_inet6 tells us if the kernel has ipv6 enabled
 #		if [[ -f /proc/net/if_inet6 ]] && [[ -n "$INTERNAL_IP6_ADDR" ]]; then
@@ -241,6 +253,8 @@ function setDynamicScriptSettings() {
         export EXTERNAL_IP_ADDR=${EXTERNAL_IP_ADDR:-$(getConfigAttrib 'EXTERNAL_IP_ADDR' ${DSIP_CONFIG_FILE})}
         export EXTERNAL_IP6_ADDR=${EXTERNAL_IP6_ADDR:-$(getConfigAttrib 'EXTERNAL_IP6_ADDR' ${DSIP_CONFIG_FILE})}
 
+        export CLUSTER_IP_ADDR=${CLUSTER_IP_ADDR:-$(getConfigAttrib 'CLUSTER_IP_ADDR' ${DSIP_CONFIG_FILE})}
+
 #		if [[ -n "$IPV6_ENABLED" ]]; then
 #			export IPV6_ENABLED
 #		else
@@ -266,6 +280,8 @@ function setDynamicScriptSettings() {
         export EXTERNAL_IP_ADDR=${EXTERNAL_IP_ADDR:-$INTERNAL_IP_ADDR}
         EXTERNAL_IP6_ADDR=$(getIP -6 "$PUBLIC_IFACE")
         export EXTERNAL_IP6_ADDR=${EXTERNAL_IP6_ADDR:-$INTERNAL_IP6_ADDR}
+
+        export CLUSTER_IP_ADDR="$INTERNAL_IP_ADDR"
 
 #		if [[ -f /proc/net/if_inet6 ]] && [[ -n "$INTERNAL_IP6_ADDR" ]]; then
 #			# sanity check, is the ipv6 address routable?
@@ -402,12 +418,16 @@ function validateRootPriv() {
     fi
 }
 
-# Validate OS and export OS specific config variables
-function validateOSInfo() {
+function setOSInfo() {
     export DISTRO=$(getDistroName)
     export DISTRO_VER=$(getDistroVer)
     export DISTRO_MAJOR_VER=$(cut -d '.' -f 1 <<<"$DISTRO_VER")
     export DISTRO_MINOR_VER=$(cut -s -d '.' -f 2 <<<"$DISTRO_VER")
+}
+
+# Validate OS and export OS specific config variables
+function validateOSInfo() {
+    setOSInfo
 
     case "$DISTRO" in
     debian)
@@ -699,6 +719,7 @@ function updateDsiprouterConfig() {
     setConfigAttrib 'EXTERNAL_IP_ADDR' "$EXTERNAL_IP_ADDR" ${DSIP_CONFIG_FILE} -q
     setConfigAttrib 'EXTERNAL_IP6_ADDR' "$EXTERNAL_IP6_ADDR" ${DSIP_CONFIG_FILE} -q
     setConfigAttrib 'EXTERNAL_FQDN' "$EXTERNAL_FQDN" ${DSIP_CONFIG_FILE} -q
+    setConfigAttrib 'CLUSTER_IP_ADDR' "$CLUSTER_IP_ADDR" ${DSIP_CONFIG_FILE} -q
     setConfigAttrib 'PUBLIC_IFACE' "$PUBLIC_IFACE" ${DSIP_CONFIG_FILE} -q
     setConfigAttrib 'PRIVATE_IFACE' "$PRIVATE_IFACE" ${DSIP_CONFIG_FILE} -q
     setConfigAttrib 'UAC_REG_ADDR' "$UAC_REG_ADDR" ${DSIP_CONFIG_FILE} -q
@@ -1154,7 +1175,6 @@ function updateRtpengineStartup() {
 }
 
 # updates DNSmasq configs from DB
-# TODO: dynamically update pacemaker IPs in /etc/hosts using getPacemakerInternalIP()
 #       they would need loaded in the DB prior on boot (can not wait for dsiprouter.py)
 #       because the pacemaker and corosync services start prior to dsiprouter.service
 function updateDnsConfig() {
@@ -1164,7 +1184,7 @@ function updateDnsConfig() {
     local KAM_DB_USER=${KAM_DB_USER:-$(getConfigAttrib 'KAM_DB_USER' ${DSIP_CONFIG_FILE})}
     local KAM_DB_PASS=${KAM_DB_PASS:-$(decryptConfigAttrib 'KAM_DB_PASS' ${DSIP_CONFIG_FILE})}
     local DSIP_CLUSTER_ID=${DSIP_CLUSTER_ID:-$(getConfigAttrib 'DSIP_CLUSTER_ID' ${DSIP_CONFIG_FILE})}
-    local DNS_CONFIG=""
+    local CLUSTER_DNS_CONFIG="" PACEMAKER_DNS_CONFIG="" MYSQL_DNS_CONFIG=""
 
     # grab hosts from db
     # NOTE: we don't add IPV6 addresses here as it is not needed and would only add more traffic to DMQ replication
@@ -1176,27 +1196,38 @@ function updateDnsConfig() {
         $(withKamDB mysql -sN \
             -e "SELECT EXTERNAL_IP_ADDR FROM dsip_settings WHERE DSIP_CLUSTER_ID = ${DSIP_CLUSTER_ID};" 2>/dev/null)
     )
+    local CLUSTER_IP_ADDRS=(
+        $(withKamDB mysql -sN \
+            -e "SELECT CLUSTER_IP_ADDR FROM dsip_settings WHERE DSIP_CLUSTER_ID = ${DSIP_CLUSTER_ID};" 2>/dev/null)
+    )
     local NUM_HOSTS=${#INTERNAL_CLUSTER_HOSTS[@]}
 
     # only search through cluster hosts if we got results
     if (( ${NUM_HOSTS} > 0 )); then
-        # find valid connections on dmq port:
-        # try internal ip first and then external ip
+        # find valid connections; trying internal ip first and then external ip, but default to internal on failure
         for i in $(seq 0 $((${NUM_HOSTS}-1))); do
-            if checkConn ${INTERNAL_CLUSTER_HOSTS[$i]} ${KAM_DMQ_PORT}; then
-                DNS_CONFIG+="${INTERNAL_CLUSTER_HOSTS[$i]} local.cluster\n"
-            elif checkConn ${EXTERNAL_CLUSTER_HOSTS[$i]} ${KAM_DMQ_PORT}; then
-                DNS_CONFIG+="${EXTERNAL_CLUSTER_HOSTS[$i]} local.cluster\n"
+            if checkConn ${INTERNAL_CLUSTER_HOSTS[$i]}; then
+                CLUSTER_DNS_CONFIG+="${INTERNAL_CLUSTER_HOSTS[$i]} local.cluster\n"
+            elif checkConn ${EXTERNAL_CLUSTER_HOSTS[$i]}; then
+                CLUSTER_DNS_CONFIG+="${EXTERNAL_CLUSTER_HOSTS[$i]} local.cluster\n"
+            else
+                CLUSTER_DNS_CONFIG+="${INTERNAL_CLUSTER_HOSTS[$i]} local.cluster\n"
             fi
+            PACEMAKER_DNS_CONFIG+="${CLUSTER_IP_ADDRS[$i]} kamcluster-node${i}\n"
+            MYSQL_DNS_CONFIG+="${CLUSTER_IP_ADDRS[$i]} mysqlcluster-node${i}\n"
         done
     # otherwise make sure local node is resolvable when querying cluster
     else
-        DNS_CONFIG+="${INTERNAL_IP_ADDR} local.cluster\n"
+        CLUSTER_DNS_CONFIG+="${INTERNAL_IP_ADDR} local.cluster\n"
     fi
 
     # update hosts file
-    perl -e "\$cluster_hosts=\"${DNS_CONFIG}\";" \
+    perl -e "\$cluster_hosts=\"${CLUSTER_DNS_CONFIG}\";" \
         -0777 -i -pe 's|(#+DSIP_CONFIG_START).*?(#+DSIP_CONFIG_END)|\1\n${cluster_hosts}\2|gms' /etc/hosts
+    perl -e "\$cluster_hosts=\"${PACEMAKER_DNS_CONFIG}\";" \
+        -0777 -i -pe 's|(#+PACEMAKER_CONFIG_START).*?(#+PACEMAKER_CONFIG_END)|\1\n${cluster_hosts}\2|gms' /etc/hosts
+    perl -e "\$cluster_hosts=\"${MYSQL_DNS_CONFIG}\";" \
+        -0777 -i -pe 's|(#+MYSQL_CONFIG_START).*?(#+MYSQL_CONFIG_END)|\1\n${cluster_hosts}\2|gms' /etc/hosts
 
     # tell dnsmasq to reload configs
     if [ -f /run/dnsmasq/dnsmasq.pid ]; then
@@ -1543,17 +1574,6 @@ function configureSystemRepos() {
     printdbg 'Configuring system repositories'
     case "$DISTRO" in
     debian|ubuntu)
-        if [[ "$DISTRO" == "ubuntu" ]] && (( ${DISTRO_MAJOR_VER} >= 24 )); then
-            APT_OFFICIAL_SOURCES="/etc/apt/sources.d/ubuntu.sources"
-            APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.sources"
-        else
-            APT_OFFICIAL_SOURCES="/etc/apt/sources.list"
-            APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.list"
-        fi
-        APT_OFFICIAL_PREFS="/etc/apt/preferences"
-        APT_OFFICIAL_PREFS_BAK="${BACKUPS_DIR}/original-sources.pref"
-        APT_DSIP_CONFIG="/etc/apt/apt.conf.d/99dsiprouter"
-
         # comment out cdrom in sources as it can halt install
         sed -i -E 's/(^\w.*cdrom.*)/#\1/g' /etc/apt/sources.list
 
@@ -1592,17 +1612,6 @@ function revertSystemRepos() {
     if [[ ! -f "${DSIP_SYSTEM_CONFIG_DIR}/.reposconfigured" ]]; then
         case "$DISTRO" in
         debian|ubuntu)
-            if [[ "$DISTRO" == "ubuntu" ]] && (( ${DISTRO_MAJOR_VER} >= 24 )); then
-                APT_OFFICIAL_SOURCES="/etc/apt/sources.d/ubuntu.sources"
-                APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.sources"
-            else
-                APT_OFFICIAL_SOURCES="/etc/apt/sources.list"
-                APT_OFFICIAL_SOURCES_BAK="${BACKUPS_DIR}/original-sources.list"
-            fi
-            APT_OFFICIAL_PREFS="/etc/apt/preferences"
-            APT_OFFICIAL_PREFS_BAK="${BACKUPS_DIR}/original-sources.pref"
-            APT_DSIP_CONFIG="/etc/apt/apt.conf.d/99dsiprouter"
-
             mv -f ${APT_OFFICIAL_SOURCES_BAK} ${APT_OFFICIAL_SOURCES}
             mv -f ${APT_OFFICIAL_PREFS_BAK} ${APT_OFFICIAL_PREFS} 2>/dev/null
             apt-get update -y
@@ -2327,23 +2336,23 @@ function installDnsmasq() {
     updatePermissions -dnsmasq
 
     # setup hosts in cluster node is resolvable
-    # cron and kam service will configure these dynamically
-    if grep -q 'DSIP_CONFIG_START' /etc/hosts 2>/dev/null; then
-        perl -e "\$int_ip='${INTERNAL_IP_ADDR}'; \$ext_ip='${EXTERNAL_IP_ADDR}'; \$int_fqdn='${INTERNAL_FQDN}'; \$ext_fqdn='${EXTERNAL_FQDN}';" \
-            -0777 -i -pe 's|(#+DSIP_CONFIG_START).*?(#+DSIP_CONFIG_END)|\1\n${int_ip} ${int_fqdn} local.cluster\n${ext_ip} ${ext_fqdn} local.cluster\n\2|gms' /etc/hosts
-    else
-        printf '\n%s\n%s\n%s\n%s\n' \
+    # dsip-init service will configure these dynamically
+    if ! grep 'DSIP_CONFIG_START' /etc/hosts &>/dev/null; then
+        printf '\n%s\n%s\n' \
             '#####DSIP_CONFIG_START' \
-            "${INTERNAL_IP_ADDR} ${INTERNAL_FQDN} local.cluster" \
-            "${EXTERNAL_IP_ADDR} ${EXTERNAL_FQDN} local.cluster" \
             '#####DSIP_CONFIG_END' >>/etc/hosts
     fi
-    # add section for the pacemaker features
     if ! grep -q 'PACEMAKER_CONFIG_START' /etc/hosts 2>/dev/null; then
         printf '\n%s\n%s\n' \
             '#####PACEMAKER_CONFIG_START' \
             '#####PACEMAKER_CONFIG_END' >>/etc/hosts
     fi
+    if ! grep -q 'MYSQL_CONFIG_START' /etc/hosts 2>/dev/null; then
+        printf '\n%s\n%s\n' \
+            '#####MYSQL_CONFIG_START' \
+            '#####MYSQL_CONFIG_END' >>/etc/hosts
+    fi
+    updateDnsConfig
 
     # update DNS hosts prior to dSIPRouter startup
     addInitCmd "/usr/bin/dsiprouter updatednsconfig"
@@ -2388,6 +2397,8 @@ function uninstallDnsmasq() {
     sed -ir -e '/#+DSIP_CONFIG_START/,/#+DSIP_CONFIG_END/d' /etc/hosts
     # remove pacemaker section from /etc/hosts
     sed -ir -e '/#+PACEMAKER_CONFIG_START/,/#+PACEMAKER_CONFIG_END/d' /etc/hosts
+    # remove mysql section from /etc/hosts
+    sed -ir -e '/#+MYSQL_CONFIG_START/,/#+MYSQL_CONFIG_END/d' /etc/hosts
 
     # remove cron job and init command
     removeInitCmd "/usr/bin/dsiprouter updatednsconfig"
@@ -3386,7 +3397,7 @@ function clusterInstall() { (
 
     # if installing in cluster sync mode GUI pass must generate it beforehand (can't undo the hash later)
     # can still be overwritten by user provided args (probably not wise though)
-    if (( $CLUSTER_SYNC == 1 )); then
+    if (( ${CLUSTER_SYNC:-0} == 1 )); then
         CLUSTER_GUI_PASS=$(urandomChars 64)
     fi
 
@@ -3536,9 +3547,9 @@ EOSSH
                 ${DSIP_PROJECT_DIR}/dsiprouter.sh install -dns ${SSH_SYNC_ARGS[@]}
 
                 # create indicator in case we iterate over this node again (if this command is re-run)
-                RETVAL=$?
-                (( $RETVAL == 0 )) && touch ${DSIP_SYSTEM_CONFIG_DIR}/.clusterinstallcomplete
-                exit $RETVAL
+                RETVAL=\$?
+                (( \$RETVAL == 0 )) && touch ${DSIP_SYSTEM_CONFIG_DIR}/.clusterinstallcomplete
+                exit \$RETVAL
             else
                 # if this node was already configured, reconfigure the encrypted credentials to use the new private key
                 source ${DSIP_PROJECT_DIR}/dsiprouter/dsip_lib.sh
@@ -3566,7 +3577,7 @@ EOSSH
 
         # if installing in cluster sync mode reuse the credentials set on the first node
         # can still be overwritten by user provided args (probably not wise though)
-        if (( $i == 0 )) && (( $CLUSTER_SYNC == 1 )); then
+        if (( $i == 0 )) && (( ${CLUSTER_SYNC:-0} == 1 )); then
             . <(
                 ${SSH_CMD[@]} ${SSH_OPTS[@]} ${SSH_REMOTE_HOST} bash 2>/dev/null <<- EOSSH
                     DSIP_PROJECT_DIR="$DSIP_PROJECT_DIR"
@@ -3921,6 +3932,7 @@ function preprocessCMD() {
     # we only need a portion of the script settings
     case "$1" in
         chown|exec|clusterinstall|licensemanager|version|-v|--version|help|-h|--help)
+            setOSInfo
             setStaticScriptSettings
             ;;
         *)

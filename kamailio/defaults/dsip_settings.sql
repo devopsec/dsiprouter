@@ -76,6 +76,7 @@ CREATE TABLE dsip_settings
   EXTERNAL_IP_ADDR        VARCHAR(255)                                              NOT NULL DEFAULT '',
   EXTERNAL_IP6_ADDR       VARCHAR(255)                                              NOT NULL DEFAULT '',
   EXTERNAL_FQDN           VARCHAR(255)                                              NOT NULL DEFAULT '',
+  CLUSTER_IP_ADDR         VARCHAR(255)                                              NOT NULL DEFAULT '',
   PUBLIC_IFACE            VARCHAR(255)                                              NOT NULL DEFAULT '',
   PRIVATE_IFACE           VARCHAR(255)                                              NOT NULL DEFAULT '',
   UPLOAD_FOLDER           VARCHAR(255)                                              NOT NULL DEFAULT '/tmp',
@@ -112,6 +113,7 @@ CREATE TABLE dsip_settings
 -- EXTERNAL_IP_ADDR is unchanged
 -- EXTERNAL_IP6_ADDR is unchanged
 -- EXTERNAL_FQDN is unchanged
+-- CLUSTER_IP_ADDR is unchanged
 -- PUBLIC_IFACE is unchanged
 -- PRIVATE_IFACE is unchanged
 -- DSIP_LICENSE_STORE is unchanged, it is associated to a single node
@@ -184,6 +186,7 @@ CREATE PROCEDURE update_dsip_settings(
   IN NEW_EXTERNAL_IP_ADDR VARCHAR(255),
   IN NEW_EXTERNAL_IP6_ADDR VARCHAR(255),
   IN NEW_EXTERNAL_FQDN VARCHAR(255),
+  IN NEW_CLUSTER_IP_ADDR VARCHAR(255),
   IN NEW_PUBLIC_IFACE VARCHAR(255),
   IN NEW_PRIVATE_IFACE VARCHAR(255),
   IN NEW_UPLOAD_FOLDER VARCHAR(255),
@@ -268,6 +271,7 @@ BEGIN
           NEW_EXTERNAL_IP_ADDR,
           NEW_EXTERNAL_IP6_ADDR,
           NEW_EXTERNAL_FQDN,
+          NEW_CLUSTER_IP_ADDR,
           NEW_PUBLIC_IFACE,
           NEW_PRIVATE_IFACE,
           NEW_UPLOAD_FOLDER,

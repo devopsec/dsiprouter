@@ -969,6 +969,7 @@ def settingsToTableFormat(settings, updates=None):
         ('EXTERNAL_IP_ADDR', data['EXTERNAL_IP_ADDR']),
         ('EXTERNAL_IP6_ADDR', data['EXTERNAL_IP6_ADDR']),
         ('EXTERNAL_FQDN', data['EXTERNAL_FQDN']),
+        ('CLUSTER_IP_ADDR', data['CLUSTER_IP_ADDR']),
         ('PUBLIC_IFACE', data['PUBLIC_IFACE']),
         ('PRIVATE_IFACE', data['PRIVATE_IFACE']),
         ('UPLOAD_FOLDER', data['UPLOAD_FOLDER']),
