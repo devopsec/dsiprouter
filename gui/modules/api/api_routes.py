@@ -2561,8 +2561,9 @@ def generateCDRS(
 
     db = DummySession()
 
-    # defaults.. keep data returned separate from returned metadata
-    response_payload = {'error': None, 'msg': '', 'kamreload': getSharedMemoryDict(STATE_SHMEM_NAME)['kam_reload_required'], 'data': []}
+    # we only need the response payload if called from a flask session
+    if not run_standalone:
+        response_payload = {'error': None, 'msg': '', 'kamreload': getSharedMemoryDict(STATE_SHMEM_NAME)['kam_reload_required'], 'data': []}
     # define here so we can cleanup in finally statement
     csv_file = ''
 
@@ -2592,11 +2593,11 @@ def generateCDRS(
         if gwgroup is not None:
             gwgroupName = strFieldsToDict(gwgroup.description)['name']
         else:
-            response_payload['status'] = "0"
-            response_payload['message'] = "Endpont group doesn't exist"
             if run_standalone:
                 IO.logerr(f'Endpont group {gwgroupid} does not exist')
                 return None
+            response_payload['status'] = "0"
+            response_payload['message'] = "Endpont group doesn't exist"
             return jsonify(response_payload)
 
         if len(cdrfilter) > 0:
@@ -2715,10 +2716,11 @@ def generateCDRS(
             data['call_id'] = row[12]
             cdrs.append(data)
 
-        response_payload['status'] = "200"
-        response_payload['data'] = cdrs
-        response_payload['total_rows'] = total_rows
-        response_payload['filtered_rows'] = filtered_rows
+        if not run_standalone:
+            response_payload['status'] = "200"
+            response_payload['data'] = cdrs
+            response_payload['total_rows'] = total_rows
+            response_payload['filtered_rows'] = filtered_rows
 
         # Convert array of dicts to csv format
         if report_type == "csv":
@@ -2746,13 +2748,13 @@ def generateCDRS(
                     data['attachments'] = [csv_file]
                     data['recipients'] = cdr_info.email.split(',')
                     sendEmail(**data)
+                    if run_standalone:
+                        IO.loginfo(f'Sent CDR report for endpoint group {gwgroupid}')
+                        return None
                     # remove CDRs from the payload that is being returned
                     response_payload.pop('data')
                     response_payload['format'] = 'csv'
                     response_payload['type'] = 'email'
-                    if run_standalone:
-                        IO.loginfo(f'Sent CDR report for endpoint group {gwgroupid}')
-                        return None
                     return jsonify(response_payload)
 
             if run_standalone:
@@ -2768,6 +2770,8 @@ def generateCDRS(
     except Exception as ex:
         db.rollback()
         db.flush()
+        if run_standalone:
+            raise
         return showApiError(ex)
     finally:
         db.close()
