@@ -952,8 +952,10 @@ function getInternalCIDR() {
         if [[ -z "$INTERFACE" ]]; then
             INTERFACE=$(ip -6 route list scope global 2>/dev/null | perl -e 'while (<>) { if (s%^(?:::/0|default).*dev (\w+).*$%\1%) { print; exit; } }')
         fi
-        CIDR=$(ip -4 address show "$INTERFACE" | grep 'inet ' | awk '{print $2}' | head -1)
         # TODO: check for /128 addresses (similar to above for ipv4 addresses)
+        if [[ -n "$INTERFACE" ]]; then
+            CIDR=$(ip -4 address show "$INTERFACE" | grep 'inet ' | awk '{print $2}' | head -1)
+        fi
     fi
 
     echo "$CIDR"
