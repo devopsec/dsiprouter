@@ -683,3 +683,14 @@ table.dataTable {
 #reload_kam, #reload_dsip {
   cursor: pointer;
 }
+
+.reload-required {
+    /* Red overlay approach for better color forcing */
+    background-blend-mode: multiply;
+    background-image: linear-gradient(rgba(200, 40, 40, 0.4), rgba(200, 40, 40, 0.4));
+
+    /* Subtle fading border */
+    border: 2px solid rgba(220, 50, 50, 0.7);
+    box-shadow: 0 0 0 2px rgba(220, 50, 50, 0.3),
+                0 0 0 4px rgba(220, 50, 50, 0.15);
+}

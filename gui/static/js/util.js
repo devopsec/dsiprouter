@@ -254,6 +254,7 @@
     var reload_btn = $('#reload');
     var split_btn = $('#reload-split');
     var kamailio_btn = $('#reload_kam');
+    var top_nav = $('#top-nav');
 
     if (required) {
       reload_btn.removeClass('btn-primary');
@@ -262,6 +263,7 @@
       reload_btn.addClass('btn-warning');
       split_btn.addClass('btn-warning');
       kamailio_btn.addClass('btn-warning');
+      top_nav.addClass('reload-required');
     }
     else {
       reload_btn.removeClass('btn-warning');
@@ -270,6 +272,7 @@
       reload_btn.addClass('btn-primary');
       split_btn.addClass('btn-primary');
       kamailio_btn.addClass('btn-secondary');
+      top_nav.removeClass('reload-required');
     }
   };
 

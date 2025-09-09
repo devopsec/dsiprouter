@@ -85,12 +85,13 @@
   </div>
 
   <div class="tableAddButton">
-    <div class="btn-group mr-2">
-      <button id='open-LicenseAdd' class='btn btn-success btn-md' data-title="Activate" data-toggle="modal"
-              data-target="#add">
-        Add
-      </button>
-    </div>
+    <button id='refreshButton' class='btn btn-info btn-md' data-title="Refresh Licenses">
+      Refresh
+    </button>
+    <button id='open-LicenseAdd' class='btn btn-success btn-md' data-title="Activate" data-toggle="modal"
+            data-target="#add">
+      Add
+    </button>
   </div>
 {% endblock %}
 
@@ -177,6 +178,14 @@
 
 {% block custom_js %}
   {{ script_tag('jquery.tabledit') }}
+  {% if state.license_server_unreachable %}
+    <script type="application/javascript">
+      if (typeof showNotification === "undefined") {
+        throw new Error("showNotification() is required and is not defined");
+      }
+      showNotification("The license server was unreachable. Try Refresh-ing the license data.", true);
+    </script>
+  {% endif %}
   {{ script_tag('license_manager') }}
 {% endblock %}
 

@@ -7,7 +7,7 @@ if sys.path[0] != '/etc/dsiprouter/gui':
     sys.path.insert(0, '/etc/dsiprouter/gui')
 
 # all of our standard and project file imports
-import os, json, urllib.parse, glob, datetime, csv, logging, signal, bjoern, secrets, subprocess, time
+import os, json, urllib.parse, glob, datetime, csv, logging, signal, bjoern, secrets, subprocess, time, requests
 import importlib.util
 from ansi2html import Ansi2HTMLConverter
 from copy import copy
@@ -2437,10 +2437,11 @@ def intializeGlobalSettings():
         IO.printinfo(f'global settings initialized: {updated_settings}')
 
 
-def intializeGlobalState():
+def intializeGlobalState(**state_updates):
     """
     Initialize global state and make it accessible in shared memory
 
+    :param state_updates:  if passed in, the changes to make to the global state
     :return:    None
     :rtype:     None
     """
@@ -2457,12 +2458,25 @@ def intializeGlobalState():
     except json.JSONDecodeError:
         state = {}
 
-    # license checks are always performed on startup, not loaded from state file
-    state['dsip_license_store'] = licenseDictToStateDict(settings.DSIP_LICENSE_STORE)
+    try:
+        # license checks are always performed on startup, not loaded from state file
+        state['dsip_license_store'] = licenseDictToStateDict(settings.DSIP_LICENSE_STORE)
+        state['license_server_unreachable'] = False
+    except requests.exceptions.RequestException as ex:
+        IO.logerr(str(ex))
+        # if we failed to contact the license server, allow startup, but warn user
+        # TODO: maybe we should use the alerting toolbar to display this notification instead
+        state['dsip_license_store'] = {}
+        state['license_server_unreachable'] = True
+
+    # these values are loaded from state file if it exists
     state['kam_reload_required'] = state.get('kam_reload_required', False)
     state['dsip_reload_required'] = state.get('dsip_reload_required', False)
     state['dsip_reload_ongoing'] = state.get('dsip_reload_ongoing', False)
     state['dsip_upgrade_ongoing'] = state.get('dsip_upgrade_ongoing', False)
+
+    # after normal logic for loading state we do any overwrites passed in
+    state.update(state_updates)
 
     createSharedMemoryDict(state, name=STATE_SHMEM_NAME)
 
@@ -2482,10 +2496,6 @@ def intializeAuthModules():
         spec.loader.exec_module(auth_mod)
         auth_mod.initialize()
         auth_modules.append(auth_mod)
-
-def guiLicenseCheck(tag):
-    global state
-    return getLicenseStatusFromStateDict(state['dsip_license_store'], tag)
 
 
 def initApp(flask_app):
@@ -2527,9 +2537,6 @@ def initApp(flask_app):
     # Dynamically update settings
     intializeGlobalSettings()
 
-    # Reload Kamailio with the settings from dSIPRouter settings config
-    reloadKamailio()
-
     # configs depending on updated settings go here
     # DEPRECATED: flask_app.env is deprecated and only flask_app.debug will be used in the future, marked for removal in v0.80
     flask_app.env = "development" if settings.DEBUG else "production"
@@ -2563,8 +2570,16 @@ def initApp(flask_app):
     if os.path.exists(settings.DSIP_UNIX_SOCK):
         os.remove(settings.DSIP_UNIX_SOCK)
 
-    # Initialize global variables based on persistent state
-    intializeGlobalState()
+    try:
+        # Reload Kamailio with the settings from dSIPRouter settings config
+        reloadKamailio()
+    except http_exceptions.HTTPException as ex:
+        IO.logerr(ex.description)
+        # Initialize global variables and make sure user knows kamailio needs reloaded
+        intializeGlobalState(kam_reload_required=True)
+    else:
+        # Initialize global variables based on persistent state
+        intializeGlobalState()
 
     # Initialize authentication modules
     intializeAuthModules()

@@ -26,7 +26,11 @@
 
   <div class="container">
     <div class="wrap">
-      <nav class="nav-bar navbar-inverse" role="navigation">
+    {% if state.kam_reload_required or state.dsip_reload_required %}
+      <nav id="top-nav" class="nav-bar navbar-inverse reload-required" role="navigation">
+    {% else %}
+      <nav  id="top-nav" class="nav-bar navbar-inverse" role="navigation">
+    {% endif %}
         <div id="top-menu" class="container-fluid active">
           <a class="navbar-brand" href="http://dopensource.com/dsiprouter"><img
               src="{{ url_for('static', filename='images/dsiprouter_x50px.png') }}"></a>

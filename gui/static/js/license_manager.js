@@ -19,7 +19,20 @@
 
   // global variables/constants for this script
   var license_table = {};
-  var loading_spinner = $('#loading-spinner');
+  var loading_spinner = $('#reloading_overlay');
+
+  /**
+   * Show a spinner while loading
+   * @param isLoading {boolean}
+   */
+  function changeLoadingState(isLoading) {
+    if (isLoading) {
+      loading_spinner.removeClass('hidden');
+    }
+    else {
+      loading_spinner.addClass('hidden');
+    }
+  }
 
   // TODO: add laading animation while waiting on woocommerce query to finish
   function activateLicense() {
@@ -93,6 +106,34 @@
       error: function(xhr, msg, error_msg) {
         error_msg = JSON.parse(xhr.responseText)["msg"];
         showNotification(error_msg, true);
+      },
+    });
+  }
+
+  function refreshLicenses() {
+    $.ajax({
+      type: "GET",
+      url: API_BASE_URL + "licensing/refresh",
+      dataType: "json",
+      beforeSend: function(xhr, settings) {
+        changeLoadingState(true);
+      },
+      success: function(response, textStatus, jqXHR) {
+        if (response.error.length !== 0) {
+          showNotification(response.msg, true);
+          return;
+        }
+
+        showNotification(response.msg);
+
+        license_table.ajax.reload();
+      },
+      error: function(xhr, msg, error_msg) {
+        error_msg = JSON.parse(xhr.responseText)["msg"];
+        showNotification(error_msg, true);
+      },
+      complete: function(xhr, text_status) {
+        changeLoadingState(false);
       },
     });
   }
@@ -258,6 +299,13 @@
       ev.preventDefault();
 
       deactivateLicense();
+    });
+
+    // submit deactivation request to api
+    $('#refreshButton').click(function(ev) {
+      ev.preventDefault();
+
+      refreshLicenses();
     });
   });
 
