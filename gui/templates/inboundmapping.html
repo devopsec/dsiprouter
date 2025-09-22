@@ -487,8 +487,9 @@
 {% block custom_js %}
   {{ script_tag('combobox') }}
   <script type="application/javascript">
-    var DID_LIST = JSON.parse("{{ imported_dids }}") || [];
-
+  
+    var DID_LIST = {{ imported_dids | safe }} || [];
+    
     var gw_mapping = [];
     {% for gw in gatewayList %}
       gw_mapping.push({
