@@ -808,7 +808,7 @@ export -f getIP
 #       https://unix.stackexchange.com/questions/305039/pausing-a-bash-script-until-previous-commands-are-finished
 #       https://unix.stackexchange.com/questions/497614/bash-execute-background-process-whilst-reading-output
 #       https://stackoverflow.com/questions/3338030/multiple-bash-traps-for-the-same-signal
-# $1 == [-4|-6] to force specific IP version
+# usage: getExternalIP [-4|-6] [iface]
 # output: the external IP for this system
 # notes: prints external ip, or empty string if not available
 # notes: below we have measurements for average time of each service
@@ -828,7 +828,7 @@ export -f getIP
 # | https://api6.ipify.org            | 1.08510  | IPV6        |
 #
 function getExternalIP() {
-    local EXTERNAL_IP="" TIMEOUT=5
+    local IFACE="" EXTERNAL_IP="" TIMEOUT=5
     local IPV4_URLS=(
         "https://icanhazip.com"
         "https://ipecho.net/plain"
@@ -848,10 +848,12 @@ function getExternalIP() {
         -4)
             local IPV4_ENABLED=1
             local IPV6_ENABLED=0
+            shift
             ;;
         -6)
             local IPV4_ENABLED=0
             local IPV6_ENABLED=1
+            shift
             ;;
         *)
             local IPV4_ENABLED=1
@@ -859,16 +861,28 @@ function getExternalIP() {
             ;;
     esac
 
+    if [[ -z "$1" ]]; then
+        IFACE="$1"
+    fi
+
     if (( ${IPV4_ENABLED} == 1 )); then
         for URL in ${IPV4_URLS[@]}; do
-            EXTERNAL_IP=$(curl -4 -s --connect-timeout $TIMEOUT $URL 2>/dev/null)
+            if [[ -n "$IFACE" ]]; then
+                EXTERNAL_IP=$(curl -4 -s --connect-timeout $TIMEOUT --interface "$IFACE" $URL 2>/dev/null)
+            else
+                EXTERNAL_IP=$(curl -4 -s --connect-timeout $TIMEOUT $URL 2>/dev/null)
+            fi
             ipv4Test "$EXTERNAL_IP" && { printf '%s' "$EXTERNAL_IP"; return 0; }
         done
     fi
 
     if (( ${IPV6_ENABLED} == 1 )) && [[ -z "$EXTERNAL_IP" ]]; then
         for URL in ${IPV6_URLS[@]}; do
-            EXTERNAL_IP=$(curl -6 -s --connect-timeout $TIMEOUT $URL 2>/dev/null)
+            if [[ -n "$IFACE" ]]; then
+                EXTERNAL_IP=$(curl -6 -s --connect-timeout $TIMEOUT --interface "$IFACE" $URL 2>/dev/null)
+            else
+                EXTERNAL_IP=$(curl -6 -s --connect-timeout $TIMEOUT $URL 2>/dev/null)
+            fi
             ipv6Test "$EXTERNAL_IP" && { printf '%s' "$EXTERNAL_IP"; return 0; }
         done
     fi
@@ -884,14 +898,28 @@ function getInternalFQDN() {
 }
 export -f getInternalFQDN
 
+# usage: getExternalFQDN [iface]
 # output: the external FQDN for this system
 # notes: prints external FQDN, or empty string if not available
-# notes: will use EXTERNAL_IP if available or look it up dynamically
+# notes: will use EXTERNAL_IP_ADDR / EXTERNAL_IP6_ADDR if available or look it up dynamically
 # notes: tries ipv4 first then ipv6
 function getExternalFQDN() {
-    local EXTERNAL_FQDN=$(dig @${GOOGLE_DNS_IPV4} +short -x ${EXTERNAL_IP:-$(getExternalIP -4)} 2>/dev/null | head -1 | sed 's/\.$//')
+    local EXTERNAL_FQDN='' IFACE=''
+
+    if [[ -z "$1" ]]; then
+        IFACE="$1"
+    fi
+
+    if [[ -z "$EXTERNAL_IP_ADDR" ]]; then
+        EXTERNAL_IP_ADDR=$(getExternalIP -4 $IFACE)
+    fi
+    EXTERNAL_FQDN=$(dig @${GOOGLE_DNS_IPV4} +short -x $EXTERNAL_IP_ADDR 2>/dev/null | head -1 | sed 's/\.$//')
+
     if (( ${IPV6_ENABLED:-0} == 1 )) && [[ -z "$EXTERNAL_FQDN" ]]; then
-          EXTERNAL_FQDN=$(dig @${GOOGLE_DNS_IPV6} +short -x ${EXTERNAL_IP6:-$(getExternalIP -6)} 2>/dev/null | head -1 | sed 's/\.$//')
+        if [[ -z "$EXTERNAL_IP6_ADDR" ]]; then
+            EXTERNAL_IP6_ADDR=$(getExternalIP -6 $IFACE)
+        fi
+        EXTERNAL_FQDN=$(dig @${GOOGLE_DNS_IPV6} +short -x $EXTERNAL_IP6_ADDR 2>/dev/null | head -1 | sed 's/\.$//')
     fi
     printf '%s' "$EXTERNAL_FQDN"
 }
