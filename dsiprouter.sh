@@ -289,10 +289,10 @@ function setDynamicScriptSettings() {
         export INTERNAL_IP6_ADDR=$(getIP -6 "$PRIVATE_IFACE")
         export INTERNAL_IP_NET6=$(getInternalCIDR -6 "$PRIVATE_IFACE")
 
-        EXTERNAL_IP_ADDR=$(getIP -4 "$PUBLIC_IFACE")
-        export EXTERNAL_IP_ADDR=${EXTERNAL_IP_ADDR:-$INTERNAL_IP_ADDR}
-        EXTERNAL_IP6_ADDR=$(getIP -6 "$PUBLIC_IFACE")
-        export EXTERNAL_IP6_ADDR=${EXTERNAL_IP6_ADDR:-$INTERNAL_IP6_ADDR}
+        EXTERNAL_IP_ADDR=$(getExternalIP -4 "$PUBLIC_IFACE")
+        export EXTERNAL_IP_ADDR=${EXTERNAL_IP_ADDR:-$(getIP -4 "$PUBLIC_IFACE")}
+        EXTERNAL_IP6_ADDR=$(getExternalIP -6 "$PUBLIC_IFACE")
+        export EXTERNAL_IP6_ADDR=${EXTERNAL_IP6_ADDR:-$(getIP -6 "$PUBLIC_IFACE")}
 
 #		if [[ -f /proc/net/if_inet6 ]] && [[ -n "$INTERNAL_IP6_ADDR" ]]; then
 #			# sanity check, is the ipv6 address routable?
@@ -311,7 +311,7 @@ function setDynamicScriptSettings() {
         export UAC_REG_ADDR="$EXTERNAL_IP_ADDR"
 
         export INTERNAL_FQDN=$(getInternalFQDN)
-        export EXTERNAL_FQDN=$(getExternalFQDN)
+        export EXTERNAL_FQDN=$(getExternalFQDN "$PUBLIC_IFACE")
         if [[ -z "$EXTERNAL_FQDN" ]] || ! checkConn "$EXTERNAL_FQDN"; then
             # if external fqdn is not routable set it to the internal fqdn instead
             export EXTERNAL_FQDN="$INTERNAL_FQDN"
