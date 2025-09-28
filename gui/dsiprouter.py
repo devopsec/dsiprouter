@@ -757,6 +757,7 @@ SELECT * FROM (
         if len(settings.FLOWROUTE_ACCESS_KEY) > 0 and len(settings.FLOWROUTE_SECRET_KEY) > 0:
             try:
                 dids = numbers_api.getNumbers()
+                # print("The did's returned: {}".format(dids))
             except http_exceptions.HTTPException as ex:
                 debugException(ex)
                 return showError(type="http", code=ex.code, msg="Flowroute Credentials Not Valid")
