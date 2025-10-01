@@ -815,7 +815,7 @@ function updateDsiprouterStartup {
 # 1. using Let's Encrypt / certbot
 # 2. issuing a new self-signed cert
 function renewSSLCert() {
-    local DEFAULT_CERT_UPLOADED CERT_ISSUER RENEW_START_TS LAST_CHANGE_TS
+    local DEFAULT_CERT_UPLOADED CERT_ISSUER CERT_CN CERTBOT_INFO LE_CERT_TS DSIP_CERT_TS
 
     # Do not renew if the admin uploaded a default cert
     DEFAULT_CERT_UPLOADED=$(
@@ -836,22 +836,54 @@ function renewSSLCert() {
                 printwarn "No LetsEncrypt certificates managed by Certbot found"
                 return 1
             fi
-            RENEW_START_TS=$(date '+%s')
+
+            # NOTE: does not handle multiple domains
+            CERT_CN=$(
+                openssl x509 -in ${DSIP_SSL_CERT} -noout -nameopt compat -subject 2>/dev/null |
+                perl -pe 's%^.*?/CN=([^/]*).*?$%\1%'
+            )
+            # CERTBOT_INFO[0] == full path to LE cert
+            # CERTBOT_INFO[1] == full path to LE key
+            CERTBOT_INFO=($(
+                certbot -n certificates | awk -v domain="$CERT_CN" -F': ' '
+                /Domains:/ { d=$2 }
+                /Certificate Path:/ { c=$2 }
+                /Private Key Path:/ {
+                    if (d ~ domain) {
+                        print c
+                        print $2
+                        found=1
+                    }
+                }
+                END {
+                    if (!found) exit 1
+                }'
+            ))
+
+            if (( $? != 0 )); then
+                printerr "dSIPRouter certificate has CN=$CERT_CN, but certbot does not have that domain registered"
+                return 1
+            fi
+
             certbot -n renew
             if (( $? == 0 )); then
-                # we only want to reload the live cert if it was actually changed
-                LAST_CHANGE_TS=$(stat -c '%Y' /etc/letsencrypt/live/${EXTERNAL_FQDN}/fullchain.pem)
+                # we only want to reload the live cert if it differs from the let's encrypt cert
+                {
+                    LE_CERT_TS=$(stat -c '%Y' "${CERTBOT_INFO[0]}") &&
+                    DSIP_CERT_TS=$(stat -c '%Y' "$DSIP_SSL_CERT")
+                }
                 if (( $? != 0 )); then
-                    printerr "Could not find new certificate for ${EXTERNAL_FQDN}"
+                    printerr 'Failed reading certificate files'
                     return 1
                 fi
-                if (( $LAST_CHANGE_TS < $RENEW_START_TS )); then
+                if (( $LE_CERT_TS == $DSIP_CERT_TS )); then
                     return 0
                 fi
 
-                rm -f ${DSIP_CERTS_DIR}/dsiprouter*
-                cp -f /etc/letsencrypt/live/${EXTERNAL_FQDN}/fullchain.pem ${DSIP_SSL_CERT}
-                cp -f /etc/letsencrypt/live/${EXTERNAL_FQDN}/privkey.pem ${DSIP_SSL_KEY}
+                printbold 'LetsEncrypt certificate differs from dSIPRouter, updating live certificates'
+                rm -f "$DSIP_SSL_CERT" "$DSIP_SSL_KEY"
+                cp -f "${CERTBOT_INFO[0]}" "$DSIP_SSL_CERT"
+                cp -f "${CERTBOT_INFO[1]}" "$DSIP_SSL_KEY"
             else
                 printerr "Failed renewing certificate for ${EXTERNAL_FQDN} using LetsEncrypt"
                 return 1
