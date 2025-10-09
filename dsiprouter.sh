@@ -3683,7 +3683,7 @@ EOSSH
 # $@ == subset of permissions to update
 # TODO: update systemd ExecStartPre commands to use this logic instead
 function updatePermissions() {
-    local OPT=""
+    local OPT STI_CERTS
 
     # set permissions on the X509 certs used by dsiprouter and kamailio
     # [special use case]: testing kamailio service startup
@@ -3698,6 +3698,9 @@ function updatePermissions() {
             chown -R root:kamailio ${DSIP_CERTS_DIR}
         fi
         find ${DSIP_CERTS_DIR}/ -type f -exec chmod 640 {} +
+        # STIR/SHAKEN certs need to be globally readable for nginx
+        STI_CERTS=$(grep -rl --include='*' 'BEGIN CERTIFICATE' "${DSIP_CERTS_DIR}/stirshaken/") &&
+        chmod 644 $STI_CERTS
     }
     # set permissions for files/dirs used by dnsmasq
     setDnsmasqPerms() {
