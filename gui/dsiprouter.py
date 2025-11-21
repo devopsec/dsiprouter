@@ -44,6 +44,7 @@ from modules.api.licensemanager.functions import licenseDictToStateDict, getLice
     getLicenseStatus
 from modules.api.licensemanager.routes import license_manager
 from modules.api.auth.routes import user
+from modules.agents.api.routes import agents
 from util.security import Credentials, urandomChars, AES_CTR
 from util.ipc import SETTINGS_SHMEM_NAME, STATE_SHMEM_NAME, createSharedMemoryDict, getSharedMemoryDict
 from util.parse_json import CreateEncoder
@@ -78,6 +79,7 @@ app.register_blueprint(mediaserver)
 app.register_blueprint(carriergroups)
 app.register_blueprint(user)
 app.register_blueprint(license_manager)
+app.register_blueprint(agents)
 app.register_blueprint(Blueprint('docs', 'docs', static_url_path='/docs', static_folder=settings.DSIP_DOCS_DIR))
 csrf = CSRFProtect(app)
 csrf.exempt(api)
@@ -85,6 +87,7 @@ csrf.exempt(mediaserver)
 csrf.exempt(carriergroups)
 csrf.exempt(user)
 csrf.exempt(license_manager)
+csrf.exempt(agents)
 numbers_api = flowroute.Numbers()
 ansi_converter = Ansi2HTMLConverter(inline=True)
 auth_modules = []
