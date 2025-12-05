@@ -477,6 +477,10 @@ def getRequestData():
     :rtype:         dict
     """
 
+    # Initialize empty data dict
+    data = {}
+
+    # Add form data or JSON data to data dict
     content_type = str.lower(request.headers.get('Content-Type', ''))
     if 'multipart/form-data' in content_type:
         data = request.form.to_dict(flat=False)
@@ -487,9 +491,16 @@ def getRequestData():
     else:
         data = request.get_json(force=True, silent=True)
 
+    # Add the request args (query string) to data dict
+    if data is None:
+        data = request.args.to_dict(flat=False)
+    else:
+        data = data | request.args.to_dict(flat=False)
+
     # fix data if client is sloppy (http_async_client)
     if request.headers.get('User-Agent') == 'http_async_client':
         data = json.loads(list(data)[0])
+
 
     return data
 
