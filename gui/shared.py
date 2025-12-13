@@ -9,6 +9,7 @@ from importlib import reload
 from flask import request, render_template, make_response
 from werkzeug.utils import escape
 from werkzeug.urls import iri_to_uri
+from sqlalchemy import exc as sql_exceptions
 import settings
 
 

@@ -2362,6 +2362,7 @@ def injectGlobals():
 # DEPRECATED: updating network settings portion of this function has moved to the CLI
 #             marked for refactoring in v0.80 as shown below
 #               def syncSettings(new_fields={}):
+
 def syncSettings(new_fields={}, update_net=False):
     """
     Synchronize settings.py with shared mem / db
@@ -2416,7 +2417,6 @@ def syncSettings(new_fields={}, update_net=False):
         debugException(ex)
         IO.printerr('Could Not Update dsip_settings Database Table')
         raise
-
 
 def sigHandler(signum=None, frame=None):
     """ Logic for trapped signals """

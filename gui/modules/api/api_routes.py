@@ -16,7 +16,8 @@ from database import startSession, DummySession, Address, dSIPNotification, dSIP
     GatewayGroups, Subscribers, dSIPLeases, dSIPMaintModes, dSIPCallSettings, InboundMapping, dSIPCDRInfo, \
     dSIPCertificates, Dispatcher, dSIPDNIDEnrichment, getDsipSettingsTableAsDict, updateDsipSettingsTable
 from shared import allowed_file, dictToStrFields, isCertValid, rowToDict, debugEndpoint, StatusCodes, \
-    strFieldsToDict, getRequestData, IO, objToDict, getAllowedSettings,updateDsipLocalSettingsFromDict
+    strFieldsToDict, getRequestData, IO, objToDict, getAllowedSettings,updateDsipLocalSettingsFromDict, \
+    updateConfig
 from util.pyasync import daemonize
 from util.ipc import STATE_SHMEM_NAME, getSharedMemoryDict
 from modules.api.api_functions import createApiResponse, showApiError, api_security
@@ -3596,7 +3597,10 @@ def addSetting():
 
         # Update settings in the database
         update_dict = {key: value}
-        updateDsipSettingsTable(update_dict)
+
+        # Update the settings.py file and reload in memory
+        # Todo: add the ability to add new settings in the settings.py and add it to the database
+        updateConfig(settings,update_dict, True)
         
         # Reload settings from DB
         updated_settings = getAllowedSettings(getDsipSettingsTableAsDict(settings.DSIP_ID))
@@ -3619,17 +3623,14 @@ def updateSetting(key):
 
         payload = getRequestData()
         value = payload.get('value', '')
-
-        # Update the local settings file if applicable
-        #if settings.LOAD_SETTINGS_FROM == 'file':
-        #    updateDsipLocalSettingsFromDict({key: value})
         
         update_dict = {key: value}
-        updateDsipSettingsTable(update_dict)
+
+        # Update the settings.py file and reload in memory
+        updateConfig(settings,update_dict, True)
         
         # Reload settings from DB
         clean_settings_data = getAllowedSettings(getDsipSettingsTableAsDict(settings.DSIP_ID))
-
 
         return createApiResponse(
             msg='Setting updated',
@@ -3649,7 +3650,8 @@ def deleteSetting(key):
 
         # Delete the setting by setting it to empty
         update_dict = {key: ''}
-        updateDsipSettingsTable(update_dict)
+        # Update the settings.py file and reload in memory
+        updateConfig(settings,update_dict, True)
 
         return createApiResponse(
             msg='Setting deleted',
