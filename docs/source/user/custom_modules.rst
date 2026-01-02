@@ -66,18 +66,32 @@ def init_module(app, csrf, settings):
 ```
 Note in many cases, you want to define your routes in a separate file (e.g., `api/routes.py`) and import them into the `init_module` function. 
 
-1. Define User Interface Elements
+3. Define User Interface Elements
 ---------------------------------
 If your module includes a user interface, you can define templates and static files within the module's
 
-1. Define Database Models
+4. Define Database Models
 ---------------------------------
 If your module requires database interaction, you can define your database models in the `db` directory
 
-1. Loading the Module
+5. Loading the Module
 ------------------------
 To load your custom module, you don't need to do anything special; the dSIPRouter application automatically scans the `modules` directory and loads any modules it finds. Ensure that your module follows the structure outlined above and includes the `init_module` function. 
 
-1. Accessing Module Functionality
+6. Accessing Module Functionality
 ---------------------------------
 Once your module is loaded, you can access its routes and functionality through the dSIPRouter web interface and API. The module will be added to the main navigation menu.  It uses the `menu_name` variable defined in the module to display the name in the menu. 
+
+    For example, if your module is named "Hello World," you can access it via the URL: `http://your-dsiprouter-instance:5000/gui/helloworld`.
+
+    You can also access the API endpoints defined in your module using the appropriate URLs.
+
+    Accessing Non-Secure API Endpoint:
+    ```
+    http://your-dsiprouter-instance:5000/api/helloworld/v1
+    ```
+    Accessing Secure API Endpoint:
+    ```
+    export DSIP_TOKEN=your_api_token_here
+    curl -k -H "Authorization: Bearer $DSIP_TOKEN" https://your-dsiprouter-instance:5000/api/helloworld-secure/v1
+    
