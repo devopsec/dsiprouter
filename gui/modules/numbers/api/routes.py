@@ -13,7 +13,7 @@ import settings
 
 numbers_api = Blueprint('numbers', __name__, template_folder='../templates', static_folder='static')
 
-@numbers_api.route('/numbers', methods=['GET'])
+@numbers_api.route('/gui/numbers', methods=['GET'])
 def numbers_index():
    
     try:
@@ -35,7 +35,7 @@ def numbers_index():
         return showError(type=error)
 
 
-@numbers_api.route('/api/v1/numbers', methods=['GET'])
+@numbers_api.route('/api/numbers/v1', methods=['GET'])
 @api_security
 def get_numbers():
     """Get list of numbers. Supports query params: source, starts_with, contains, ends_with, status."""
@@ -90,7 +90,7 @@ def get_numbers():
         db.close()
 
 
-@numbers_api.route('/api/v1/numbers', methods=['POST'])
+@numbers_api.route('/api/numbers/v1', methods=['POST'])
 @api_security
 def create_number():
     db = DummySession()
@@ -140,7 +140,7 @@ def create_number():
         db.close()
 
 
-@numbers_api.route('/api/v1/numbers/<int:number_id>', methods=['PUT'])
+@numbers_api.route('/api/numbers/v1/<int:number_id>', methods=['PUT'])
 @api_security
 def update_number(number_id):
     db = DummySession()
@@ -175,7 +175,7 @@ def update_number(number_id):
         db.close()
 
 
-@numbers_api.route('/api/v1/numbers/<int:number_id>', methods=['DELETE'])
+@numbers_api.route('/api/numbers/v1/<int:number_id>', methods=['DELETE'])
 @api_security
 def delete_number(number_id):
     db = DummySession()
@@ -198,7 +198,7 @@ def delete_number(number_id):
         db.close()
 
 
-@numbers_api.route('/api/v1/numbers', methods=['DELETE'])
+@numbers_api.route('/api/numbers/v1', methods=['DELETE'])
 @api_security
 def delete_numbers_by_dids():
     db = DummySession()
