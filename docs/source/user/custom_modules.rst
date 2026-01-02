@@ -33,32 +33,51 @@ A custom module typically consists of the following components:
 The module should include an `__init__.py` file that contains an `init_module` function. This function will be called when the module is loaded, allowing you to register routes and perform any necessary setup.   
 Example `__init__.py`:
 ```python
-from flask import Blueprint
-module_name = "your_module"
-module_menu_name = "Your Module"
+ from flask import Blueprint, render_template
+
+name = "helloworld"
+menu_name = "Hello World"
+version = "1.0.0"
+description = "Simple Hello World Module"
+dsip_min_version = "0.78"
+
+
 def init_module(app, csrf, settings):
-    your_module_bp = Blueprint('your_module', __name__, template_folder='../templates', static_folder='static')
+    helloworld_bp = Blueprint(name, __name__, template_folder='templates', static_folder='static')
     
-    @your_module_bp.route('/your_module')
-    def your_module_home():
-        return "Welcome to Your Module!"
-    
-    app.register_blueprint(your_module_bp)
+    # GUI Route
+    @helloworld_bp.route('/gui/' + name, methods=['GET'])
+    def helloworld_home():
+        return render_template("helloworld.html", message="Welcome to Hello World!")
+
+    # Non-Secure API Route
+    @helloworld_bp.route(f"/api/{name}/v1", methods=['GET'])
+    def helloworld_api():
+        return {"message": "API endpoint for Hello World"}
+
+    # Secure API Route
+    @helloworld_bp.route(f"/api/{name}-secure/v1", methods=['GET'])
+    @api_security
+    def helloworld_secure_api():
+        return {"message": "Secure API endpoint for Hello World"}
+
+    app.register_blueprint(helloworld_bp)
+
 ```
 Note in many cases, you want to define your routes in a separate file (e.g., `api/routes.py`) and import them into the `init_module` function. 
 
-3. Define User Interface Elements
+1. Define User Interface Elements
 ---------------------------------
 If your module includes a user interface, you can define templates and static files within the module's
 
-4. Define Database Models
+1. Define Database Models
 ---------------------------------
 If your module requires database interaction, you can define your database models in the `db` directory
 
-5. Loading the Module
+1. Loading the Module
 ------------------------
 To load your custom module, you don't need to do anything special; the dSIPRouter application automatically scans the `modules` directory and loads any modules it finds. Ensure that your module follows the structure outlined above and includes the `init_module` function. 
 
-6. Accessing Module Functionality
+1. Accessing Module Functionality
 ---------------------------------
-Once your module is loaded, you can access its routes and functionality through the dSIPRouter web interface. The module will be added to the main navigation menu.  It uses the `module_menu_name` variable defined in the module to display the name in the menu. 
+Once your module is loaded, you can access its routes and functionality through the dSIPRouter web interface and API. The module will be added to the main navigation menu.  It uses the `menu_name` variable defined in the module to display the name in the menu. 
