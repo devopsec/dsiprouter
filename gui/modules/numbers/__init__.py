@@ -8,11 +8,12 @@ from modules.numbers.api.routes import numbers_api
 numbers = numbers_api
 
 # Module Metadata
-module_name = "numbers"
-module_publisher = "dSIPRouter"
-module_menu_name = "Numbers"
-module_description = "dSIPRouter Numbers Management Module"
-module_version = "1.0.0"
+name = "numbers"
+publisher = "dSIPRouter"
+menu_name = "Numbers"
+description = "dSIPRouter Numbers Management Module"
+version = "1.0.0"
+dsip_min_version = "0.78"
 
 def init_module(app, csrf, settings):
     """Initialize the numbers module by registering its blueprint."""
