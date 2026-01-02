@@ -2,17 +2,37 @@ import sys, os
 if sys.path[0] != '/etc/dsiprouter/gui':
     sys.path.insert(0, '/etc/dsiprouter/gui')
 
-from flask import Blueprint
+from flask import Blueprint, session,render_template, request
 from modules.numbers.db.dsip_number import dSIPNumber
 from database import startSession, DummySession
 from modules.api.api_functions import createApiResponse, showApiError, api_security
-from shared import getRequestData, rowToDict
+from shared import getRequestData, rowToDict, showError, debugException, debugEndpoint
 from sqlalchemy import or_
 from werkzeug import exceptions as http_exceptions
+import settings
 
-numbers_api = Blueprint('numbers_api', __name__)
-# export a `numbers` symbol for consistency with other modules' imports
-numbers = numbers_api
+numbers_api = Blueprint('numbers', __name__, template_folder='../templates', static_folder='static')
+
+@numbers_api.route('/numbers', methods=['GET'])
+def numbers_index():
+   
+    try:
+        if (settings.DEBUG):
+            debugEndpoint()
+
+        if not session.get('logged_in'):
+            return render_template('index.html', version=settings.VERSION)
+        else:
+            action = request.args.get('action')
+            return render_template('numbers.html', show_add_onload=action, version=settings.VERSION)
+            
+    except http_exceptions.HTTPException as ex:
+        debugException(ex)
+        return showError(type='http', code=ex.code, msg=ex.description)
+    except Exception as ex:
+        debugException(ex, log_ex=False, print_ex=True, showstack=False)
+        error = "server"
+        return showError(type=error)
 
 
 @numbers_api.route('/api/v1/numbers', methods=['GET'])
@@ -31,19 +51,21 @@ def get_numbers():
 
         # extract from query string
         payload = getRequestData()
-        source = payload['source']
-        starts_with = payload['starts_with']
-        contains = payload['contains']
-        ends_with = payload['ends_with']
-        status = payload['status']
+        pool= payload['pool'] if 'pool' in payload else None
+        source = payload['source'] if 'source' in payload else None
+        starts_with = ''.join(payload['starts_with']) if 'starts_with' in payload else None
+        contains = ''.join(payload['contains']) if 'contains' in payload else None
+        ends_with = ''.join(payload['ends_with']) if 'ends_with' in payload else None
+        status = payload['status'] if 'status' in payload else None
 
         q = db.query(dSIPNumber)
 
         if source:
             # support using source as either carrier or pool
-            q = q.filter(or_(dSIPNumber.carrier == source, dSIPNumber.pool == source))
+            q = q.filter(dSIPNumber.carrier == source)
 
         if starts_with:
+            #q = q.filter(dSIPNumber.did.like(f"{starts_with}%"))
             q = q.filter(dSIPNumber.did.like(f"{starts_with}%"))
         if contains:
             q = q.filter(dSIPNumber.did.like(f"%{contains}%"))
@@ -51,11 +73,14 @@ def get_numbers():
             q = q.filter(dSIPNumber.did.like(f"%{ends_with}"))
         if status is not None and status != '':
             q = q.filter(dSIPNumber.status == status)
+        if pool:
+            q = q.filter(dSIPNumber.pool == pool)
 
         results = q.all()
         data = [rowToDict(r) for r in results]
+        count = len(data)
 
-        return createApiResponse(msg='Numbers retrieved', data=data)
+        return createApiResponse(msg=str(count) + ' Numbers Retrieved', data=data)
 
     except Exception as ex:
         db.rollback()
@@ -76,6 +101,17 @@ def create_number():
         if not did:
             raise http_exceptions.BadRequest('did is required')
 
+        # CHeck if DID exists
+        existing = db.query(dSIPNumber).filter(
+            or_(
+                dSIPNumber.did == did,
+                dSIPNumber.did == "+" + did,
+            )).first()
+        
+        if existing is not None:
+            raise http_exceptions.Conflict('DID already exists')
+        
+
         number = dSIPNumber(
             did=did,
             status=payload.get('status'),
@@ -83,7 +119,13 @@ def create_number():
             pool=payload.get('pool'),
             assigned_length=payload.get('assigned_length'),
             assigned_reference_id=payload.get('assigned_reference_id'),
+           
         )
+
+        # define an assignd_date if the assigned_length is set
+        if payload.get('assigned_length'):
+            from datetime import datetime
+            number.assigned_date = datetime.utcnow()
 
         db.add(number)
         db.flush()
@@ -111,9 +153,14 @@ def update_number(number_id):
             raise http_exceptions.NotFound('Number not found')
 
         # update fields
-        for key in ('did', 'status', 'carrier', 'pool', 'assigned_length', 'assigned_reference_id'):
+        for key in ('did', 'status', 'carrier', 'pool', 'assigned_length', 'assigned_reference_id', 'assigned_date'):
             if key in payload:
                 setattr(number, key, payload.get(key))
+        
+        # define an assignd_date if the assigned_length is set
+        if payload.get('assigned_length'):
+            from datetime import datetime
+            number.assigned_date = datetime.utcnow()
 
         db.add(number)
         db.flush()
@@ -143,6 +190,48 @@ def delete_number(number_id):
         db.commit()
 
         return createApiResponse(msg='Number deleted', data=[{'id': number_id}])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@numbers_api.route('/api/v1/numbers', methods=['DELETE'])
+@api_security
+def delete_numbers_by_dids():
+    db = DummySession()
+    try:
+        db = startSession()
+        payload = getRequestData()
+        did = payload.get('did')
+        dids = payload.get('dids', [])
+        if did:
+            dids = [did]
+        if not dids:
+            raise http_exceptions.BadRequest('did or dids is required')
+
+        deleted = []
+        for d in dids:
+            normalized = d.lstrip('+')
+            number = db.query(dSIPNumber).filter(
+                or_(
+                    dSIPNumber.did == normalized,
+                    dSIPNumber.did == "+" + normalized,
+                )).first()
+            
+            if number is not None:
+                db.delete(number)
+                deleted.append({'did': d, 'id': number.id})
+
+        if not deleted:
+            raise http_exceptions.NotFound('No numbers found to delete')
+
+        db.flush()
+        db.commit()
+
+        return createApiResponse(msg=f'{len(deleted)} Numbers deleted', data=deleted)
     except Exception as ex:
         db.rollback()
         db.flush()
