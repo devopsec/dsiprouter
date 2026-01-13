@@ -107,7 +107,10 @@ for custom_module in glob.glob(f"{current_directory}/gui/modules/*"):
             if hasattr(module, 'init_module'):
                 module.init_module(app, csrf, settings)
                 print(f"Module loaded: {module.description}")
-                dynamicModules[module.name] = module.menu_name
+                module_details = {}
+                module_details['menu_name'] = module.menu_name
+                module_details['menu_icon'] = module.menu_icon
+                dynamicModules[module.name] = module_details
         except Exception as e:
             print(f"Failed to load module: {module_path} - {str(e)}")
 
