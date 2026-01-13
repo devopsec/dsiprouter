@@ -2,8 +2,12 @@
         <link rel="stylesheet" href="/static/css/{{ location }}.css">
 {%- endmacro -%}
 
-{%- macro script_tag(location) -%}
+{%- macro script_tag(location, module) -%}
+        {%- if module -%}
+        <script src="/{{ module }}/static/js/{{ location }}.js"></script>
+        {%- else -%}
         <script src="/static/js/{{ location }}.js"></script>
+        {%- endif -%}
 {%- endmacro -%}
 
 {%- macro tracked_link(title, url) -%}

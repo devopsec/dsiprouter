@@ -86,49 +86,46 @@
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-globe"></i>
-              <a class="navlink" href="/">Dashboard</a>
-              <i class="fa fa-chevron-down"></i>
+             <i class="glyphicon glyphicon-dashboard"></i>
+             <a class="navlink" href="/">Dashboard</a>
             </div>
           </li>
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-users"></i>
+              <i class="glyphicon glyphicon-th"></i>
               <a class="navlink" href="/carriergroups">Carrier Groups</a>
-              <i class="fa fa-chevron-down"></i>
+              
             </div>
           </li>
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-users"></i>
+              <i class="glyphicon glyphicon-road"></i>
               <a class="navlink" href="/endpointgroups">Endpoint Groups</a>
-              <i class="fa fa-chevron-down"></i>
+              
             </div>
           </li>
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-cloud"></i>
+              <i class="glyphicon glyphicon-object-align-horizontal"></i>
               <a class="navlink" href="/domains">Domains</a>
-              <i class="fa fa-chevron-down"></i>
+              
             </div>
           </li>
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-map-marker"></i>
+             <i class="glyphicon glyphicon-arrow-left"></i>
               <a class="navlink" href="/inboundmapping">Inbound Routes</a>
-              <i class="fa fa-chevron-down"></i>
             </div>
           </li>
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-file-image-o"></i>
+              <i class="glyphicon glyphicon-arrow-right"></i>
               <a class="navlink" href="/outboundroutes">Outbound Routes</a>
-              <i class="fa fa-chevron-down"></i>
             </div>
           </li>
           <!--
@@ -142,25 +139,25 @@
           -->
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-file-image-o"></i>
+              <i class="glyphicon glyphicon-list-alt"></i>
               <a class="navlink" href="/cdrs">Call Detail Records</a>
-              <i class="fa fa-chevron-down"></i>
+              
             </div>
           </li>
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-file-image-o"></i>
+              <i class="glyphicon glyphicon-user"></i>
               <a class="navlink" href="/agents">Voice AI Agents</a>
-              <i class="fa fa-chevron-down"></i>
+              
             </div>
           </li>
           <!-- Load Dynamic Modules -->
-          {% for module_name, module_menu_name in dynamicModules.items() %}
+          {% for module_name, module_details in dynamicModules.items() %}
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-file-image-o"></i>
-              <a class="navlink" href="/gui/{{ module_name }}">{{ module_menu_name }}</a>
-              <i class="fa fa-chevron-down"></i>
+              <i class="{{ module_details['menu_icon'] }}"></i>
+              <a class="navlink" href="/gui/{{ module_name }}">{{ module_details['menu_name'] }}</a>
+              
             </div>
           </li>
           {% endfor %}
@@ -168,7 +165,8 @@
 
           <li class="nav-header">
             <div class="link">
-              <i class="fa fa-lg fa-file-image-o"></i>
+           
+              <i class="glyphicon glyphicon-cog"></i> 
               <a class="navlink" href="#">System Settings</a>
               <i class="glyphicon glyphicon-chevron-down"></i>
             </div>

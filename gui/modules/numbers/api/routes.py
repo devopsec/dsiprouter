@@ -10,8 +10,10 @@ from shared import getRequestData, rowToDict, showError, debugException, debugEn
 from sqlalchemy import or_
 from werkzeug import exceptions as http_exceptions
 import settings
+import csv
+import io
 
-numbers_api = Blueprint('numbers', __name__, template_folder='../templates', static_folder='static')
+numbers_api = Blueprint('numbers', __name__, template_folder='../templates', static_folder='../static', static_url_path='/numbers/static')
 
 @numbers_api.route('/gui/numbers', methods=['GET'])
 def numbers_index():
@@ -35,7 +37,7 @@ def numbers_index():
         return showError(type=error)
 
 
-@numbers_api.route('/api/numbers/v1', methods=['GET'])
+@numbers_api.route('/api/numbers/v1/number', methods=['GET'])
 @api_security
 def get_numbers():
     """Get list of numbers. Supports query params: source, starts_with, contains, ends_with, status."""
@@ -90,7 +92,7 @@ def get_numbers():
         db.close()
 
 
-@numbers_api.route('/api/numbers/v1', methods=['POST'])
+@numbers_api.route('/api/numbers/v1/number', methods=['POST'])
 @api_security
 def create_number():
     db = DummySession()
@@ -140,7 +142,7 @@ def create_number():
         db.close()
 
 
-@numbers_api.route('/api/numbers/v1/<int:number_id>', methods=['PUT'])
+@numbers_api.route('/api/numbers/v1/number/<int:number_id>', methods=['PUT'])
 @api_security
 def update_number(number_id):
     db = DummySession()
@@ -175,7 +177,7 @@ def update_number(number_id):
         db.close()
 
 
-@numbers_api.route('/api/numbers/v1/<int:number_id>', methods=['DELETE'])
+@numbers_api.route('/api/numbers/v1/number/<int:number_id>', methods=['DELETE'])
 @api_security
 def delete_number(number_id):
     db = DummySession()
@@ -198,7 +200,7 @@ def delete_number(number_id):
         db.close()
 
 
-@numbers_api.route('/api/numbers/v1', methods=['DELETE'])
+@numbers_api.route('/api/numbers/v1/number', methods=['DELETE'])
 @api_security
 def delete_numbers_by_dids():
     db = DummySession()
@@ -232,6 +234,69 @@ def delete_numbers_by_dids():
         db.commit()
 
         return createApiResponse(msg=f'{len(deleted)} Numbers deleted', data=deleted)
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@numbers_api.route('/api/numbers/v1/number/bulk', methods=['POST'])
+@api_security
+def bulk_create_numbers():
+    db = DummySession()
+    try:
+        db = startSession()
+        file = request.files.get('file')
+        if not file:
+            raise http_exceptions.BadRequest('CSV file is required')
+
+        # Read CSV
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.reader(stream)
+        header = next(csv_input)  # Skip header
+
+        numbers = []
+        for row in csv_input:
+            if len(row) < 1:
+                continue
+            did = row[0].strip()
+            status = row[1].strip() if len(row) > 1 else None
+            carrier = row[2].strip() if len(row) > 2 else None
+            pool = row[3].strip() if len(row) > 3 else None
+            assigned_length = row[4].strip() if len(row) > 4 else None
+            assigned_reference_id = row[5].strip() if len(row) > 5 else None
+
+            # Check if DID exists
+            existing = db.query(dSIPNumber).filter(
+                or_(
+                    dSIPNumber.did == did,
+                    dSIPNumber.did == "+" + did,
+                )).first()
+            if existing is not None:
+                continue  # Skip existing
+
+            number = dSIPNumber(
+                did=did,
+                status=status,
+                carrier=carrier,
+                pool=pool,
+                assigned_length=assigned_length,
+                assigned_reference_id=assigned_reference_id,
+            )
+            if assigned_length:
+                from datetime import datetime
+                number.assigned_date = datetime.utcnow()
+
+            db.add(number)
+            numbers.append(number)
+
+        db.flush()
+        db.commit()
+
+        data = [rowToDict(n) for n in numbers]
+        return createApiResponse(msg=f'{len(numbers)} Numbers created', data=data)
     except Exception as ex:
         db.rollback()
         db.flush()

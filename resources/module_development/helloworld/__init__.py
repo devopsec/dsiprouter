@@ -13,7 +13,7 @@ dsip_min_version = "0.78"
 
 
 def init_module(app, csrf, settings):
-    helloworld_bp = Blueprint(name, __name__, template_folder='templates', static_folder='static')
+    helloworld_bp = Blueprint(name, __name__, template_folder='templates', static_folder=name + '/static')
     
     # GUI Route
     @helloworld_bp.route('/gui/' + name, methods=['GET'])

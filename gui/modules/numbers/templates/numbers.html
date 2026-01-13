@@ -1,8 +1,12 @@
-{% extends 'fullwidth_layout.html' %}
+{% extends 'table_layout.html' %}
 
 {% block title %}Numbers{% endblock %}
 
 {% block custom_css %}
+<style>
+    .assigned-fields { display: none; }
+    .status-assigned .assigned-fields { display: block; }
+</style>
 {% endblock %}
 
 {% block body %}
@@ -12,6 +16,12 @@
       <h3>Numbers</h3>
     </div>
 
+    <div class="tableAddButton">
+      <button id='open-DIDImport' class='btn btn-success btn-md' data-title="Import DID's" data-toggle="modal"
+            data-target="#import">Bulk Import
+      </button>
+    </div>
+
     {% if reloadstatus %}
       <h3>Kamailio reload: {{ reloadstatus }}</h3>
     {% endif %}
@@ -19,10 +29,93 @@
 
   <div class="content-section"> <!-- begin numbers section -->
 
+    <div class="col-md-12">
+    <!-- Bulk Upload -->
+    <h2>Bulk Add Numbers</h2>
+    <form id="bulk-upload-form" enctype="multipart/form-data">
+        <input type="file" id="csv-file" accept=".csv" required>
+        <button type="submit">Upload CSV</button>
+    </form>
+    
+    <!-- Add/Edit Form -->
+    <h2>Add/Edit Number</h2>
+    <form id="number-form">
+        <input type="hidden" id="number-id">
+        <label>Did: <input type="text" id="did" required></label><br>
+        <label>Status: 
+            <select id="status">
+                <option value="unassigned">Unassigned</option>
+                <option value="assigned">Assigned</option>
+            </select>
+        </label><br>
+        <label>Carrier: <select id="carrier"></select></label><br>
+        <label>Pool: <input type="text" id="pool"></label><br>
+        <div class="assigned-fields">
+            <label>Assigned Length: <input type="text" id="assigned_length"></label><br>
+            <label>Assigned Reference ID: <input type="text" id="assigned_reference_id"></label><br>
+            <label>Assigned Date: <input type="date" id="assigned_date"></label><br>
+        </div>
+        <button type="submit">Save</button>
+        <button type="button" id="cancel-edit">Cancel</button>
+    </form>
+    
+    <!-- Numbers List -->
+    <h2>Numbers List</h2>
+    <table id="numbers-table" border="1">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Did</th>
+                <th>Status</th>
+                <th>Carrier</th>
+                <th>Pool</th>
+                <th>Assigned Length</th>
+                <th>Assigned Reference ID</th>
+                <th>Assigned Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
   </div> <!-- end numbers section -->
+  </div>
+
+{% endblock %}
+
+
+{% block import_modal %}
+
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><span
+        class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>
+    <h4 class="modal-title custom_align" id="Heading">Import Numbers</h4>
+  </div>
+
+  <div class="modal-body">
+    <form action="/gui/numbers/import" method="POST" role="form" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input class="ruleid" type="hidden" name="ruleid">
+      <input class="hf_ruleid" type="hidden" name="hf_ruleid">
+      <input class="ff_ruleid" type="hidden" name="ff_ruleid">
+      <input class="hf_groupid" type="hidden" name="hf_groupid">
+      <input class="ff_groupid" type="hidden" name="ff_groupid">
+
+      <div class="form-group">
+        <label for="importFile">CSV File with DID's (<a href="/numbers/static/template/DID_example.csv" target="_blank">Download Example CSV</a>)</label>
+        <input type="file" name="file" class="form-control-file" id="importFile">
+      </div>
+
+      <div class="modal-footer ">
+        <button type="submit" class="btn btn-success btn-lg" style="width: 100%;"><span
+            class="glyphicon glyphicon-ok-sign"></span> Import
+        </button>
+      </div>
+    </form>
+  </div>
 
 {% endblock %}
 
 {% block custom_js %}
-  {{ script_tag('numbers') }}
+  {{ script_tag('numbers','numbers') }}
 {% endblock %}
