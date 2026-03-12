@@ -4,11 +4,11 @@ import sys
 if sys.path[0] != '/etc/dsiprouter/gui':
     sys.path.insert(0, '/etc/dsiprouter/gui')
 
-import os, time, random, subprocess, requests, csv, base64, codecs, re, socket, json
+import os, time, random, subprocess, requests, csv, base64, codecs, re, socket, json, urllib3
 from contextlib import closing
 from datetime import datetime
 from flask import Blueprint, jsonify, request, send_file, g
-from sqlalchemy import exc as sql_exceptions, and_, or_
+from sqlalchemy import exc as sql_exceptions, and_, or_, bindparam
 from sqlalchemy.sql import text
 from werkzeug import exceptions as http_exceptions
 from werkzeug.utils import secure_filename
@@ -27,6 +27,7 @@ from util.security import AES_CTR, urandomChars, KeyCertPair
 from util.file_handling import change_owner
 from util import kamtls, letsencrypt
 from util.cron import addTaggedCronjob, updateTaggedCronjob, deleteTaggedCronjob
+from util.system import system_info
 from sysloginit import initSyslogLogger
 import settings
 
@@ -35,6 +36,157 @@ api = Blueprint('api', __name__)
 
 # TODO: we need to abstract out common code between gui and api
 
+@api.route("/api/v1/stats", methods=['GET'])
+@api_security
+def getStats():
+
+    try:
+        if (settings.DEBUG):
+            debugEndpoint()
+    
+        data = {'components': [], 'alerts': [], 'charts': {}, 'topEndpointGroups': []}
+
+
+        db = startSession()
+
+        # Endpoint Group Chart
+
+        epgroups = db.query(GatewayGroups).filter(
+            GatewayGroups.description.regexp_match(GatewayGroups.FILTER.ENDPOINT.value)
+        ).all()
+
+        endpoint_groupids = [group.id for group in epgroups]
+
+        # DBQuery to get the number of calls by hour for endpoint groups
+        if len(endpoint_groupids) > 0:
+            stmt = text(
+                'select hour(call_start_time), count(*) '
+                'from cdrs '
+                'where call_start_time between date_sub(now(), interval 4 hour) and now() '
+                'and (src_gwgroupid in :group_ids '
+                'or dst_gwgroupid in :group_ids) '
+                'group by hour(call_start_time) '
+                'order by hour(call_start_time)'
+            ).bindparams(bindparam('group_ids', expanding=True))
+            results = db.execute(stmt, {'group_ids': endpoint_groupids}).all()
+        else:
+            results = []
+
+        if results is not None:
+            data['charts']['messagesOverTime'] = {'timeLabels': [], 'messages': []}
+            for row in results:
+                data['charts']['messagesOverTime']['timeLabels'].append(str(row[0]) + ":00")
+                data['charts']['messagesOverTime']['messages'].append(row[1])
+               
+        #Carrier Group Chart
+
+        epgroups = db.query(GatewayGroups).filter(
+            GatewayGroups.description.regexp_match(GatewayGroups.FILTER.CARRIER.value)
+        ).all()
+
+        carrier_groupids = [group.id for group in epgroups]
+
+        # DBQuery to get the number of calls by hour for carrier groups
+        if len(carrier_groupids) > 0:
+            stmt = text(
+                'select hour(call_start_time), count(*) '
+                'from cdrs '
+                'where call_start_time between date_sub(now(), interval 4 hour) and now() '
+                 'and (src_gwgroupid in :group_ids '
+                'or dst_gwgroupid in :group_ids)' 
+                'group by hour(call_start_time) '
+                'order by hour(call_start_time) '
+            ).bindparams(bindparam('group_ids', expanding=True))
+            results = db.execute(stmt, {'group_ids': carrier_groupids}).all()
+        else:
+            results = []
+
+        if results is not None:
+            data['charts']['carrierGroupMessages'] = {'timeLabels': [], 'messages': []}
+            for row in results:
+                data['charts']['carrierGroupMessages']['timeLabels'].append(str(row[0]) + ":00")
+                data['charts']['carrierGroupMessages']['messages'].append(row[1])
+
+
+       # Top Endpoint Groups by calls
+       # DBQuery to get the number of calls by hour for endpoint groups
+        if len(endpoint_groupids) > 0:
+            stmt = text(
+                'select src_gwgroupid, description, count(*) '
+                'from cdrs '
+                'join dr_gw_lists on cdrs.src_gwgroupid = dr_gw_lists.id '
+                'where call_start_time between date_sub(now(), interval 4 hour) and now() '
+                 'and (src_gwgroupid in :group_ids '
+                'or dst_gwgroupid in :group_ids) ' 
+                'group by src_gwgroupid '
+                'order by count(*) desc '
+            ).bindparams(bindparam('group_ids', expanding=True))
+            results = db.execute(stmt, {'group_ids': endpoint_groupids}).all()
+        else:
+            results = []
+
+        if results is not None:
+            data['topEndpointGroups'] = {'endpointgroups': []}
+            for row in results:
+                # Grab the name of the endpointgroup from the description field
+                name = strFieldsToDict(row[1])['name'] if 'name' in strFieldsToDict(row[1]) else ''
+                data['topEndpointGroups']['endpointgroups'].append({
+                    'id': row[0],
+                    'name': name,
+                    'calls': row[2]
+                })
+
+       
+       # Get System Version Info
+        data['components'] = system_info()['components']
+        data['alerts'] = system_info()['alerts']
+        
+
+        # Get Kamailio Stats
+        jsonrpc_payload = {"jsonrpc": "2.0", "method": "tm.stats", "id": 1}
+        try:
+            r = requests.get('http://127.0.0.1:5060/api/kamailio', json=jsonrpc_payload)
+            # Only using waiting stat for now, but we can easily add more if needed
+            data['queued_messages'] = r.json()['result']['waiting']
+        except requests.exceptions.RequestException as e:
+            data['queued_messages'] = '0'
+            pass
+      
+        jsonrpc_payload = {"jsonrpc": "2.0", "method": "dlg.stats_active", "id": 1}
+        try:
+            r = requests.get('http://127.0.0.1:5060/api/kamailio', json=jsonrpc_payload)
+            data['active_calls'] = r.json()['result']['all']
+        except requests.exceptions.RequestException as e:
+            data['active_calls'] = 0
+            pass
+        
+        # Get UAC Registration Info for both Endpoints and Carrier Groups
+        jsonrpc_payload = {"jsonrpc": "2.0", "method": "uac.reg_dump", "id": 1}
+        try:
+            r = requests.get('http://127.0.0.1:5060/api/kamailio', json=jsonrpc_payload)
+            if r.json()['result'] is not None:
+                registrations = r.json()['result']
+                num_of_reg_failures = 0
+                for reg in registrations:
+                    if ((reg['flags'] & StatusCodes.UAC_REG_SUCCEEDED)!= StatusCodes.UAC_REG_SUCCEEDED and \
+                                (reg['flags'] & StatusCodes.UAC_REG_INPROGRESS_WITH_AUTH) != StatusCodes.UAC_REG_INPROGRESS_WITH_AUTH and \
+                                (reg['flags'] & StatusCodes.UAC_REG_INPROGRESS) != StatusCodes.UAC_REG_INPROGRESS):
+                        num_of_reg_failures += 1
+
+                data['registration_failures'] = num_of_reg_failures
+            else:
+                data['registration_failures'] = 0
+        except requests.exceptions.RequestException as e:
+            data['registration_failures'] = 0
+    
+
+        return createApiResponse(
+            msg='Successfully retrieved kamailio stats',
+            data=data,
+        )
+
+    except Exception as ex:
+        return showApiError(ex)
 
 @api.route("/api/v1/kamailio/stats", methods=['GET'])
 @api_security

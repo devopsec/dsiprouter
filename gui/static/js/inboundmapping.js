@@ -5,13 +5,13 @@
    * @global window scope
    * @namespace aria
    */
-  var aria = aria || {};
+  /* var aria = aria || {}; */
 
   /**
    * @global script scope
    * @type {Array}
    */
-  var DID_LIST = DID_LIST || [];
+  /*var DID_LIST = DID_LIST || []; */
 
   /**
    * Search DID_LIST for search_string

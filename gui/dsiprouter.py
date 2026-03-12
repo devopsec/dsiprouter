@@ -35,7 +35,6 @@ from database import DummySession, createSessionObjects, startSession, settingsT
 from modules import flowroute
 from modules.domain.domain_routes import domains
 from modules.api.api_routes import api
-from modules.api.mediaserver.routes import mediaserver
 from modules.api.carriergroups.routes import carriergroups, addCarrierGroups
 from modules.api.carriergroups.functions import addUpdateCarriers, displayCarrierGroups, displayCarriers
 from modules.api.kamailio.functions import reloadKamailio
@@ -44,6 +43,8 @@ from modules.api.licensemanager.functions import licenseDictToStateDict, getLice
     getLicenseStatus
 from modules.api.licensemanager.routes import license_manager
 from modules.api.auth.routes import user
+from modules.agents.api.routes import agents
+from modules.numbers import numbers
 from util.security import Credentials, urandomChars, AES_CTR
 from util.ipc import SETTINGS_SHMEM_NAME, STATE_SHMEM_NAME, createSharedMemoryDict, getSharedMemoryDict
 from util.parse_json import CreateEncoder
@@ -72,22 +73,49 @@ UPGRADE_OFFSET = f'{UPGRADE_LOG}.offset'
 
 # module variables
 app = Flask(__name__, static_folder="./static", static_url_path="/static")
+if settings.DEBUG:
+    app.config['EXPLAIN_TEMPLATE_LOADING'] = True
+app.logger.setLevel(logging.INFO)
 app.register_blueprint(domains)
 app.register_blueprint(api)
-app.register_blueprint(mediaserver)
 app.register_blueprint(carriergroups)
 app.register_blueprint(user)
 app.register_blueprint(license_manager)
+app.register_blueprint(agents)
 app.register_blueprint(Blueprint('docs', 'docs', static_url_path='/docs', static_folder=settings.DSIP_DOCS_DIR))
 csrf = CSRFProtect(app)
 csrf.exempt(api)
-csrf.exempt(mediaserver)
 csrf.exempt(carriergroups)
 csrf.exempt(user)
 csrf.exempt(license_manager)
+csrf.exempt(agents)
+
 numbers_api = flowroute.Numbers()
 ansi_converter = Ansi2HTMLConverter(inline=True)
 auth_modules = []
+dynamicModules = {}
+
+# Load Dynamic Modules - Module v2 Architecture
+current_directory = os.getcwd()
+for custom_module in glob.glob(f"{current_directory}/gui/modules/*"):
+    if os.path.exists(f"{custom_module}/__init__.py"):
+        module_path = f"modules." + os.path.basename(custom_module)
+        try:
+            print(f"Loading module: {module_path}")
+            module = importlib.import_module(module_path)
+            # Only v2 have an init_module function
+            if hasattr(module, 'init_module'):
+                module.init_module(app, csrf, settings)
+                print(f"Module loaded: {module.description}")
+                module_details = {}
+                module_details['menu_name'] = module.menu_name
+                module_details['menu_icon'] = module.menu_icon
+                dynamicModules[module.name] = module_details
+        except Exception as e:
+            print(f"Failed to load module: {module_path} - {str(e)}")
+
+
+
 
 
 @app.before_first_request
@@ -757,6 +785,7 @@ SELECT * FROM (
         if len(settings.FLOWROUTE_ACCESS_KEY) > 0 and len(settings.FLOWROUTE_SECRET_KEY) > 0:
             try:
                 dids = numbers_api.getNumbers()
+                # print("The did's returned: {}".format(dids))
             except http_exceptions.HTTPException as ex:
                 debugException(ex)
                 return showError(type="http", code=ex.code, msg="Flowroute Credentials Not Valid")
@@ -2259,7 +2288,8 @@ def injectGlobals():
     return {
         'settings': settings,
         'state': state,
-        'licenseValid': lambda tag: getLicenseStatusFromStateDict(state['dsip_license_store'], tag)
+        'licenseValid': lambda tag: getLicenseStatusFromStateDict(state['dsip_license_store'], tag),
+        'dynamicModules': dynamicModules
     }
 
 
@@ -2522,6 +2552,8 @@ def initApp(flask_app):
     # Setup Flask timed url serializer
     flask_app.config['EMAIL_SALT'] = urandomChars()
     flask_app.config['TIMED_SERIALIZER'] = URLSafeTimedSerializer(flask_app.config["SECRET_KEY"])
+
+   
 
     # Add jinja2 filters
     flask_app.jinja_env.filters["attrFilter"] = attrFilter

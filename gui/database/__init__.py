@@ -741,6 +741,22 @@ def createSessionObjects():
     dsip_user = Table('dsip_user', mapper.metadata, autoload_replace=True, autoload_with=db_engine)
     # TODO: this is temporary and will be refactored
     dsip_gwgroup2lb = Table('dsip_gwgroup2lb', mapper.metadata, autoload_replace=True, autoload_with=db_engine)
+   
+
+    # try to import the dSIPAgent model defined in modules; keep it optional
+    # to avoid hard import failures in environments with different PYTHONPATHs
+    try:
+        from modules.agents.db.dsip_agent import dSIPAgent
+        dsip_agent = Table('dsip_agent', mapper.metadata, autoload_replace=True, autoload_with=db_engine)
+    except Exception:
+        dSIPAgent = None
+
+    # try to import dSIPNumber model for `dsip_numbers` table
+    try:
+        from modules.numbers.db.dsip_number import dSIPNumber
+        dsip_numbers = Table('dsip_numbers', mapper.metadata, autoload_replace=True, autoload_with=db_engine)
+    except Exception:
+        dSIPNumber = None
 
     # dr_gw_lists_alias = select([
     #     dr_gw_lists.c.id.label("drlist_id"),
@@ -775,6 +791,12 @@ def createSessionObjects():
     mapper.map_imperatively(dSIPCertificates, dsip_certificates)
     mapper.map_imperatively(dSIPDNIDEnrichment, dsip_dnid_enrichment)
     mapper.map_imperatively(dSIPUser, dsip_user)
+    # map the dSIPAgent model if it was successfully imported
+    if dSIPAgent is not None:
+        mapper.map_imperatively(dSIPAgent, dsip_agent)
+    # map the dSIPNumber model if it was successfully imported
+    if dsip_numbers is not None:
+        mapper.map_imperatively(dSIPNumber, dsip_numbers)
     # TODO: this is temporary and will be refactored
     mapper.map_imperatively(DsipGwgroup2LB, dsip_gwgroup2lb)
 

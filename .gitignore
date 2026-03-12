@@ -12,3 +12,15 @@ venv/
 docs/build/
 gui/modules/fusionpbx/certs/cert.key
 gui/modules/fusionpbx/certs/cert_combined.crt
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.mo
+*.swp
+*.swo
+.DS_Store   
+.env

@@ -16,16 +16,16 @@
 #!define WITH_NAT
 #!define WITH_DISPATCHER
 #!define WITH_CALL_SETTINGS
-##!define WITH_SIGNAL_SERVERNAT
+#!define WITH_SIGNAL_SERVERNAT
 ##!define WITH_SIGNAL_SERVERNAT6
-##!define WITH_MEDIA_SERVERNAT
+#!define WITH_MEDIA_SERVERNAT
 #!define WITH_MULTIDOMAIN
 #!define WITH_TELEBLOCK
 #!define WITH_ANTIFLOOD
 ##!define WITH_DBCLUSTER
 #!define WITH_LCR
 #!define WITH_TLS
-#!define WITH_SCTP
+##!define WITH_SCTP
 #!define WITH_WEBSOCKETS
 ##!define WITH_DMQ
 #!define WITH_MSTEAMS
@@ -35,7 +35,7 @@
 #!define WITH_STIRSHAKEN
 ##!define WITH_IPV6
 ##!define WITH_HOMER
-##!define WITH_DMZ
+#!define WITH_DMZ
 ##!define WITH_PUSH
 #!define WITH_EMERGENCY_PASSTHROUGH
 
@@ -49,19 +49,19 @@
 # Defined Constants with String Replacement
 #======================================================================
 
-#!substdef "!DSIP_ID!!g"
-#!substdef "!DSIP_CLUSTER_ID!!g"
-#!substdef "!DSIP_VERSION!!g"
-#!substdef "!HOMER_ID!!g"
-#!substdef "!INTERNAL_IP_ADDR!!g"
-#!substdef "!INTERNAL_IP_NET!!g"
-#!substdef "!INTERNAL_IP6_ADDR!!g"
+#!substdef "!DSIP_ID!99d998264a7af6ee11596da3fc0fa89ba8a75e268757229bece9ed8249f3b8253237bfa365e2c2f2af1969db2ca4bcca46313139363531416142313346383431!g"
+#!substdef "!DSIP_CLUSTER_ID!1!g"
+#!substdef "!DSIP_VERSION!0.78!g"
+#!substdef "!HOMER_ID!915981529!g"
+#!substdef "!INTERNAL_IP_ADDR!10.213.0.2!g"
+#!substdef "!INTERNAL_IP_NET!10.213.0.2/24!g"
+#!substdef "!INTERNAL_IP6_ADDR!fe80::be24:11ff:fe32:fc01!g"
 #!substdef "!INTERNAL_IP6_NET!!g"
-#!substdef "!INTERNAL_FQDN!!g"
-#!substdef "!EXTERNAL_IP_ADDR!!g"
-#!substdef "!EXTERNAL_IP6_ADDR!!g"
-#!substdef "!EXTERNAL_FQDN!!g"
-#!substdef "!UAC_REG_ADDR!!g"
+#!substdef "!INTERNAL_FQDN!sbc.fonesoftpbx.cloud!g"
+#!substdef "!EXTERNAL_IP_ADDR!173.234.24.116!g"
+#!substdef "!EXTERNAL_IP6_ADDR!fe80::be24:11ff:fe32:fc00!g"
+#!substdef "!EXTERNAL_FQDN!sbc.fonesoftpbx.cloud!g"
+#!substdef "!UAC_REG_ADDR!173.234.24.116!g"
 #!substdef "!INBOUND_NLB_FQDN!!g"
 #!substdef "!OUTBOUND_NLB_FQDN!!g"
 #!substdef "!HOMER_HOST!!g"
@@ -70,7 +70,7 @@
 #!substdef "!DMQ_PORT!5090!g"
 #!substdef "!WSS_PORT!4443!g"
 #!substdef "!HEP_PORT!9060!g"
-#!substdef "!RTPENGINE_URI!udp:127.0.0.1:7722!g"
+#!substdef "!RTPENGINE_URI!udp:localhost:7722!g"
 
 #======================================================================
 # Defined Constants
@@ -80,12 +80,12 @@
 #!ifdef WITH_MYSQL
 #!ifdef WITH_DBCLUSTER
 #!define DBURL "cluster://dbcluster"
-#!define SQLCONN_KAM "kam=>mysql://kamailio:kamailiorw@localhost:3306/kamailio"
-#!define SQLCONN_AST "asterisk=>mysql://kamailio:kamailiorw@localhost:3306/kamailio"
+#!define SQLCONN_KAM "kam=>mysql://kamailio:7ZA4QWfbHMRoxWD0d8sq1dethC0tGA7lcImmEqyRYpclqY1mgVusR9WQVhkYP67P@localhost:3306/kamailio"
+#!define SQLCONN_AST "asterisk=>mysql://kamailio:7ZA4QWfbHMRoxWD0d8sq1dethC0tGA7lcImmEqyRYpclqY1mgVusR9WQVhkYP67P@localhost:3306/kamailio"
 #!else
-#!define DBURL "mysql://kamailio:kamailiorw@localhost:3306/kamailio"
-#!define SQLCONN_KAM "kam=>mysql://kamailio:kamailiorw@localhost:3306/kamailio"
-#!define SQLCONN_AST "asterisk=>mysql://kamailio:kamailiorw@localhost:3306/kamailio"
+#!define DBURL "mysql://kamailio:7ZA4QWfbHMRoxWD0d8sq1dethC0tGA7lcImmEqyRYpclqY1mgVusR9WQVhkYP67P@localhost:3306/kamailio"
+#!define SQLCONN_KAM "kam=>mysql://kamailio:7ZA4QWfbHMRoxWD0d8sq1dethC0tGA7lcImmEqyRYpclqY1mgVusR9WQVhkYP67P@localhost:3306/kamailio"
+#!define SQLCONN_AST "asterisk=>mysql://kamailio:7ZA4QWfbHMRoxWD0d8sq1dethC0tGA7lcImmEqyRYpclqY1mgVusR9WQVhkYP67P@localhost:3306/kamailio"
 #!endif
 #!endif
 
@@ -204,36 +204,25 @@ max_while_loops = 10000
 
 # uncomment the next line to disable the auto discovery of local aliases
 # based on reverse DNS on IPs (default on)
-auto_aliases = false
+#auto_aliases = false
 
-# configure interface/port/proto kamailio will bind on with listen= param
-# REF: https://www.kamailio.org/wikidocs/cookbooks/devel/core/#listen
-# we also configure the local domains with alias= param (needed for loose routing)
+# add local domain aliases
 # NOTE:	port is required in alias for loose routing to function properly
-# REF:	https://www.kamailio.org/wikidocs/cookbooks/devel/core/#alias
-# TODO: ifdef the below
-alias = "localhost:SIP_PORT"
-alias = "localhost:SIPS_PORT"
-alias = "localhost:WSS_PORT"
-alias = "localhost:DMQ_PORT"
-alias = "INTERNAL_FQDN:SIP_PORT"
-alias = "INTERNAL_FQDN:SIPS_PORT"
-alias = "INTERNAL_FQDN:WSS_PORT"
-alias = "INTERNAL_FQDN:DMQ_PORT"
+# REF:	https://www.kamailio.org/wiki/cookbooks/5.5.x/core#alias
 alias = "EXTERNAL_FQDN:SIP_PORT"
 alias = "EXTERNAL_FQDN:SIPS_PORT"
+alias = "EXTERNAL_FQDN:DMQ_PORT"
 alias = "EXTERNAL_FQDN:WSS_PORT"
-#!ifexp INBOUND_NLB_FQDN != ""
 alias = "INBOUND_NLB_FQDN:SIP_PORT"
 alias = "INBOUND_NLB_FQDN:SIPS_PORT"
+alias = "INBOUND_NLB_FQDN:DMQ_PORT"
 alias = "INBOUND_NLB_FQDN:WSS_PORT"
-#!endif
-#!ifexp OUTBOUND_NLB_FQDN != ""
 alias = "OUTBOUND_NLB_FQDN:SIP_PORT"
 alias = "OUTBOUND_NLB_FQDN:SIPS_PORT"
+alias = "OUTBOUND_NLB_FQDN:DMQ_PORT"
 alias = "OUTBOUND_NLB_FQDN:WSS_PORT"
-#!endif
 
+# configure interface/port/proto kamailio will bind on
 listen = udp:127.0.0.1:SIP_PORT
 listen = tcp:127.0.0.1:SIP_PORT
 #!ifdef WITH_TLS
@@ -258,7 +247,7 @@ listen = udp:INTERNAL_IP_ADDR:SIP_PORT advertise EXTERNAL_IP_ADDR:SIP_PORT
 listen = tcp:INTERNAL_IP_ADDR:SIP_PORT advertise EXTERNAL_IP_ADDR:SIP_PORT
 #!ifdef WITH_TLS
 #!ifdef WITH_WEBSOCKETS
-listen = tls:INTERNAL_IP_ADDR:WSS_PORT advertise EXTERNAL_IP_ADDR:WSS_PORT
+listen = tls:INTERNAL_IP_ADDR:WSS_PORT advertise "EXTERNAL_FQDN":WSS_PORT
 #!endif
 #!endif
 #!ifdef WITH_SCTP
@@ -294,15 +283,15 @@ listen = udp:[EXTERNAL_IP6_ADDR]:SIP_PORT
 listen = tcp:[EXTERNAL_IP6_ADDR]:SIP_PORT
 #!endif
 #!ifdef WITH_SIGNAL_SERVERNAT6
-listen = udp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise [EXTERNAL_IP6_ADDR:]SIP_PORT
-listen = tcp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise [EXTERNAL_IP6_ADDR]:SIP_PORT
+listen = udp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise EXTERNAL_IP6_ADDR:SIP_PORT
+listen = tcp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise EXTERNAL_IP6_ADDR:SIP_PORT
 #!ifdef WITH_TLS
 #!ifdef WITH_WEBSOCKETS
-listen = tls:[INTERNAL_IP6_ADDR]:WSS_PORT advertise EXTERNAL_IP_ADDR:WSS_PORT
+listen = tls:[INTERNAL_IP6_ADDR]:WSS_PORT advertise "EXTERNAL_FQDN":WSS_PORT
 #!endif
 #!endif
 #!ifdef WITH_SCTP
-listen = sctp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise [EXTERNAL_IP6_ADDR]:SIP_PORT
+listen = sctp:[INTERNAL_IP6_ADDR]:SIP_PORT advertise EXTERNAL_IP6_ADDR:SIP_PORT
 #!endif
 #!else
 listen = udp:[INTERNAL_IP6_ADDR]:SIP_PORT
@@ -326,9 +315,9 @@ listen = udp:INTERNAL_IP_ADDR:DMQ_PORT
 enable_tls = true
 tcp_accept_no_cl = true
 tcp_rd_buf_size = 16384
-listen = tls:INTERNAL_IP_ADDR:SIPS_PORT advertise EXTERNAL_IP_ADDR:SIPS_PORT
+listen = tls:INTERNAL_IP_ADDR:SIPS_PORT advertise "EXTERNAL_FQDN":SIPS_PORT
 #!ifdef WITH_IPV6
-listen = tls:[INTERNAL_IP6_ADDR]:SIPS_PORT advertise EXTERNAL_IP_ADDR:SIPS_PORT
+listen = tls:[INTERNAL_IP6_ADDR]:SIPS_PORT advertise "EXTERNAL_FQDN":SIPS_PORT
 #!endif
 #!endif
 
@@ -389,21 +378,15 @@ server.role = "" desc "Role of the server in the topology"
 # Local calling maximum digits for the initiating PBX - PBX sending the INVITE
 server.pbx_max_local_digits = 5 desc "Maximum digits for local pbx extensions"
 
-# PBX INVITE Timeout (msecs) if a no provisional message is received
-server.pbx_invite_timeout = 5000 desc "PBX INVITE timeout if a no provisional message is received"
+# PBX INVITE Timeout (msecs) to support having a Primary and Secondary PBX
+server.pbx_invite_timeout = 5000 desc "The default PBX INVITE timeout"
 
 # PBX INVITE Timeout (msecs) if a SIP 100/180/181/183 message is received
-server.pbx_invite_timeout_aftertry = 120000 desc "PBX INVITE timeout after a provisional message is received"
-
-# Carrier INVITE Timeout (msecs) if a no provisional message is received
-server.carrier_invite_timeout = 10000 desc "Carrier INVITE timeout if a no provisional message is received"
-
-# Carrier INVITE Timeout (msecs) if a SIP 100/180/181/183 message is received
-server.carrier_invite_timeout_aftertry = 120000 desc "Carrier INVITE timeout after a provisional message is received"
+server.pbx_invite_timeout_aftertry = 16000 desc "PBX INVITE timeout value if a SIP 100 message is received"
 
 # DSIPRouter API Server Settings
 server.api_server = "https://127.0.0.1:5000" desc "URL to the DSIPRouter API Server"
-server.api_token = "admin" desc "API Token for DSIPRouter API Server"
+server.api_token = "qHcZlx5NPWACv7uie5psLm1g9gUecVRwXljplsLihJaQ0froZu39fEHS554rywJT" desc "API Token for DSIPRouter API Server"
 
 # Emergency Numbers
 server.emergency_numbers = "^([2-9]11|112|999|000|988|933)$" desc "Emergency Numbers"
@@ -1441,7 +1424,8 @@ route[NEXTHOP] {
 			}
 
 			# drouting only removes prefix from ru, typically we want it removed from the To as well
-			$tU = $rU;
+			uac_replace_from("\"$fU\"", "$rz:$fU@$rd:$rp");
+			uac_replace_to("\"$tU\"", "$rz:$tU@$rd:$rp");
 
 			msg_apply_changes();
 			if (!isbflagset(FLB_SRC_MSTEAMS)) {	
@@ -1690,7 +1674,9 @@ route[RELAY] {
 	# handle STIR/SHAKEN
 #!ifdef WITH_TRANSNEXUS
 	if ((int)$sel(cfg_get.transnexus.authservice_enabled)) {
-		route(TRANSNEXUS_OUTBOUND);
+		if (!isflagset(FLT_DOMAINROUTING)) {
+			route(TRANSNEXUS_OUTBOUND);
+		}
 	}
 #!endif
 
@@ -1771,15 +1757,6 @@ route[CHECK_CALL_LIMIT] {
 
 # Per SIP request initial checks
 route[REQINIT] {
-	# no connect for sending replies
-	set_reply_no_connect();
-	# enforce symmetric signaling
-	# send back replies to the source address/port of request
-	# NOTE: we only require this for NATed requests, public devices can use asymmetric signalling
-	if (nat_uac_test("3")) {
-		force_rport();
-	}
-
 	# reusable flag denoting the source is an allowed address
 	# checking if the flag is already set is a simple optimization for follow-on messages in the transaction
 	if (!isflagset(FLT_SRC_ALLOWED)) {
@@ -2165,10 +2142,9 @@ route[REGISTRAR] {
 		$var(ct_domain) = $fd;
 		route(REPLACE_CONTACT_DOMAIN);
 		
-		# Force Register request out the internal network when using DMZ mode
 		#!ifdef WITH_DMZ
-                $fs='udp:INTERNAL_IP_ADDR:SIP_PORT';
-                #!endif
+		$fs='udp:INTERNAL_IP_ADDR:SIP_PORT';
+		#!endif
 		if (isbflagset(FLB_WS_DEVICE)) {
 			add_path();
 		}
@@ -2196,8 +2172,7 @@ route[REGISTRAR] {
 			$sht(pass_thru_auth=>$(avp(domain_pbx_ip){s.select,0,:})) = $var(rd_orig);
 		}
 
-		# we are going to pass this request on to the backend server(s)
-		route(SET_CALLDST_INFO);
+		#We are going to pass this request on to the backend server
 		route(RELAY);
 		exit;
 	}
@@ -2480,7 +2455,7 @@ route[LOCATION] {
 		setflag(FLT_ACCMISSED);
 	}
 	#Set the INVITE timeout for sending calls to invites
-	t_set_fr((int)$sel(cfg_get.server.carrier_invite_timeout_aftertry), (int)$sel(cfg_get.server.carrier_invite_timeout));
+	t_set_fr(120000,10000);
 
 	route(SET_CALLDST_INFO);
 	route(RELAY);
@@ -3187,78 +3162,78 @@ route[SET_DST_MEDIA] {
 			$dlg_var(dst_media_tp) = "";
 			# Setting a dialog variable since dlg_setflag doesn't see to work on Manage Branches
 			$dlg_var(FLD_USE_RTPE) = "1";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "direct":
 			dlg_resetflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "0";
 			$dlg_var(dst_media_tp) = "";
-			$avp(src_media_tp) = "";
+			$var(src_media_tp) = "";
 			break;
 		case "rtp_avp":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "RTP/AVP";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "rtp_savp":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "RTP/SAVP";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "rtp_avpf":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "RTP/AVPF";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "rtp_savpf":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "RTP/SAVPF";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "rtp_avp_any":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "UDP/TLS/RTP/SAVP";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "rtp_avpf_any":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "UDP/TLS/RTP/SAVPF";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "udptl":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "T.38=force";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "osrtp_avp":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "transport-protocol=RTP/AVP OSRTP=offer";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		case "osrtp_avpf":
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "transport-protocol=RTP/AVPF OSRTP=offer";
-			sdp_transport("$avp(src_media_tp)");
+			sdp_transport("$var(src_media_tp)");
 			break;
 		default:
 			xlog("L_WARN", "invalid media configuration requested for endpoint $dlg_var(dst_gwid). Defaulting to RTPEngine enabled.\n");
 			dlg_setflag(FLD_USE_RTPE);
 			$dlg_var(FLD_USE_RTPE) = "1";
 			$dlg_var(dst_media_tp) = "";
-			$avp(src_media_tp) = "";
+			$var(src_media_tp) = "";
 			break;
 	}
 
-	$dlg_var(src_media_tp) = $avp(src_media_tp);
+	$dlg_var(src_media_tp) = $var(src_media_tp);
 
 	return;
 }

@@ -477,6 +477,10 @@ def getRequestData():
     :rtype:         dict
     """
 
+    # Initialize empty data dict
+    data = {}
+
+    # Add form data or JSON data to data dict
     content_type = str.lower(request.headers.get('Content-Type', ''))
     if 'multipart/form-data' in content_type:
         data = request.form.to_dict(flat=False)
@@ -487,9 +491,16 @@ def getRequestData():
     else:
         data = request.get_json(force=True, silent=True)
 
+    # Add the request args (query string) to data dict
+    if data is None:
+        data = request.args.to_dict(flat=False)
+    else:
+        data = data | request.args.to_dict(flat=False)
+
     # fix data if client is sloppy (http_async_client)
     if request.headers.get('User-Agent') == 'http_async_client':
         data = json.loads(list(data)[0])
+
 
     return data
 
@@ -559,3 +570,12 @@ class StatusCodes():
     HTTP_LOOP_DETECTED = 508
     HTTP_NOT_EXTENDED = 510
     HTTP_NETWORK_AUTHENTICATION_REQUIRED = 511
+
+
+#   -- Kamailio UAC Registration Status Codes -- 
+    UAC_REG_DISABLED = 1
+    UAC_REG_INPROGRESS = 2
+    UAC_REG_SUCCEEDED= 4
+    UAC_REG_INPROGRESS_WITH_AUTH = 8
+    UAC_REG_INITIATED = 16
+    

@@ -4057,6 +4057,7 @@ function processCMD() {
     local ARG="$1" OPT="" RETVAL=0
     case $ARG in
         install)
+	    set -x
             # always add official repo's, set platform, and create init service
             RUN_COMMANDS+=(configureSystemPath setCloudPlatform createInitService createSwapFile installDsiprouterCli)
             shift
@@ -4116,6 +4117,9 @@ function processCMD() {
 
                         PUBLIC_IFACE=$(echo "$TMP" | cut -d ',' -f 1)
                         PRIVATE_IFACE=$(echo "$TMP" | cut -d ',' -f 2)
+			echo $PUBLIC_IFACE
+			echo $PRIVATE_IFACE
+			exit
                         ;;
                     -netm|--network-mode=*)
                         if echo "$1" | grep -q '=' 2>/dev/null; then
