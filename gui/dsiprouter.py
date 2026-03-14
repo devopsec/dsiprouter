@@ -96,12 +96,11 @@ auth_modules = []
 dynamicModules = {}
 
 # Load Dynamic Modules - Module v2 Architecture
-current_directory = os.getcwd()
-for custom_module in glob.glob(f"{current_directory}/gui/modules/*"):
+for custom_module in glob.glob(f"{settings.DSIP_PROJECT_DIR}/gui/modules/*"):
     if os.path.exists(f"{custom_module}/__init__.py"):
         module_path = f"modules." + os.path.basename(custom_module)
         try:
-            print(f"Loading module: {module_path}")
+            print(f"Trying to Load module: {module_path}")
             module = importlib.import_module(module_path)
             # Only v2 have an init_module function
             if hasattr(module, 'init_module'):
@@ -111,6 +110,8 @@ for custom_module in glob.glob(f"{current_directory}/gui/modules/*"):
                 module_details['menu_name'] = module.menu_name
                 module_details['menu_icon'] = module.menu_icon
                 dynamicModules[module.name] = module_details
+            else:
+                print(f"Module is NOT v2, will load statically: {module_path}")
         except Exception as e:
             print(f"Failed to load module: {module_path} - {str(e)}")
 
