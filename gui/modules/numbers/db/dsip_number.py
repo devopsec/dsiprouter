@@ -3,9 +3,13 @@
 Defines `dSIPNumber` class mapping to the `numbers` table.
 """
 from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
 
 
-class dSIPNumber(object):
+class dSIPNumber(Base):
     """Model for `numbers` table.
 
     Fields:
@@ -20,6 +24,7 @@ class dSIPNumber(object):
       - date_created: date created (datetime, auto)
     """
 
+    __tablename__ = 'dsip_number'
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
     did = Column(String(64), nullable=False)
     status = Column(String(64), nullable=True)
