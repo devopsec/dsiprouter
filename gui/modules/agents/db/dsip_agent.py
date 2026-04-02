@@ -6,16 +6,20 @@ actual DB column names where those contain hyphens.
 """
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import text
+from sqlalchemy.orm import DeclarativeBase  
 
 
-class dSIPAgent(object):
+class Base(DeclarativeBase):
+    pass
+
+class dSIPAgent(Base):
     """Model for `dsip_agent` table.
 
     Columns mirror the SQL schema. For DB column names that contain hyphens
     we use a Python-friendly attribute name and provide the DB column name
     as the first argument to Column(), e.g. Column('project-id', String(...)).
     """
-
+    __tablename__ = 'dsip_agent'
     id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
     name = Column(String(255), nullable=False)
     # column name is `type` in the DB; using attribute name `type` here
@@ -75,4 +79,29 @@ class dSIPAgent(object):
             'modified_at': getattr(self, 'modified_at', None),
             'status': self.status,
             'error': self.error,
+        }
+
+
+class dSIPAgentInstruction(Base):
+    """Model for `dsip_agent_instruction` table."""
+
+    __tablename__ = 'dsip_agent_instruction'
+
+    id = Column(Integer, primary_key=True, autoincrement=True, nullable=False)
+    name = Column(String(255), nullable=False)
+    project_type = Column(String(255), nullable=False, default='openai')
+    instructions = Column(String(4096), nullable=False)
+
+    def __init__(self, name, instructions, project_type='openai'):
+        self.name = name
+        self.project_type = project_type
+        self.instructions = instructions
+
+    def to_dict(self):
+        """Return a plain dict representation of this object."""
+        return {
+            'id': getattr(self, 'id', None),
+            'name': self.name,
+            'project_type': self.project_type,
+            'instructions': self.instructions,
         }

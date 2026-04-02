@@ -1,6 +1,0 @@
-name = agents
-display_name = "Voice Agents"
-# The core api logic is located in a the <dsiprouter root dir>/gui/modules/api
-api = agents
-# The main template file should be the same name as the module, but could be overridden
-template = ""
