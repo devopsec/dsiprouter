@@ -1,59 +1,88 @@
+var settings_table;
 let settingsData = {};
 
 // Load settings on page load
 document.addEventListener('DOMContentLoaded', function() {
-  loadSettings();
+  loadSettingsTable();
 });
 
-function loadSettings() {
-  fetch('/api/v1/settings', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.error) {
-      showMessage('Error loading settings: ' + data.msg, 'error');
-      return;
-    }
-    
-    settingsData = data.data && data.data.length > 0 ? data.data[0] : {};
-    renderSettingsTable();
-  })
-  .catch(error => {
-    showMessage('Error: ' + error.message, 'error');
+function getCategoryFromKey(key) {
+  if (!key || typeof key !== 'string') return 'GENERAL';
+  const parts = key.split('_');
+  return parts.length > 1 ? parts[0] : 'GENERAL';
+}
+
+function normalizeSettingsResponse(response) {
+  if (!response || !response.data) return [];
+
+  const settingsObject = Array.isArray(response.data) ? response.data[0] : response.data;
+  if (!settingsObject || typeof settingsObject !== 'object') return [];
+
+  settingsData = settingsObject;
+
+  return Object.keys(settingsObject).map((key) => ({
+    key: key,
+    value: settingsObject[key],
+    category: getCategoryFromKey(key)
+  }));
+}
+
+
+
+function loadSettingsTable() {
+  // Reinitialize table to avoid duplicate DataTable instances.
+  if ($.fn.DataTable.isDataTable('#settings-table')) {
+    settings_table.destroy();
+    $('#settings-table tbody').empty();
+  }
+
+  settings_table = $('#settings-table').DataTable({
+    "ajax": {
+      "url": "/api/v1/settings",
+      "type": "GET",
+      "dataSrc": function(response) {
+        return normalizeSettingsResponse(response);
+      }
+    },
+    "columns": [
+      {
+        "data": null,
+        "render": function(data, type, row) {
+          return `<input type="checkbox" class="row-check" value="${escapeHtml(row.key)}">`;
+        }
+      },
+      {"data": "key"},
+      {
+        "data": "value",
+        "render": function(data, type, row) {
+          const safeValue = data === null || data === undefined ? '' : String(data);
+          return `<input type="text" class="form-control" data-key="${escapeHtml(row.key)}" value="${escapeHtml(safeValue)}">`;
+        }
+      },
+      {"data": "category"},
+      {
+        "data": null,
+        "render": function(data, type, row) {
+          const safeKey = JSON.stringify(row.key);
+          return `<button onclick='updateSettingValue(${safeKey})' class="btn btn-primary">Save</button>
+                  <button onclick='deleteSetting(${safeKey})' class="btn btn-danger">
+                    <span class="glyphicon glyphicon-trash"></span>
+                  </button>`;
+        }
+      }
+    ],
+    "order": [[1, 'asc']]
   });
 }
 
-function renderSettingsTable() {
-  const tbody = document.getElementById('settingsTableBody');
-  tbody.innerHTML = '';
-  
-  // Sort keys alphabetically
-  const keys = Object.keys(settingsData).sort();
-  
-  keys.forEach(key => {
-    const value = settingsData[key];
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${escapeHtml(key)}</td>
-      <td>
-        <input type="text" class="setting-value" data-key="${key}" value="${escapeHtml(String(value || ''))}" />
-      </td>
-      <td>
-        <div class="action-buttons">
-          <button onclick="updateSettingValue('${key}')" class="btn btn-primary">Save</button>
-          <button onclick="deleteSetting('${key}')" class="btn btn-danger">
-          <span class="glyphicon glyphicon-trash"></span>
-          </button>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
+function loadSettings() {
+  if (settings_table) {
+    settings_table.ajax.reload(null, false);
+  } else {
+    loadSettingsTable();
+  }
 }
+
 
 function addNewSetting() {
   const key = document.getElementById('newSettingKey').value.trim();
@@ -150,12 +179,14 @@ function deleteSetting(key) {
 }
 
 function showMessage(message, type) {
-  const container = document.getElementById('messageContainer');
+  const container = document.getElementById('message-bar');
   const alertDiv = document.createElement('div');
   alertDiv.className = `alert ${type}`;
   alertDiv.textContent = message;
   container.appendChild(alertDiv);
-  
+  container.style.display = 'block';
+  container.hidden = false;
+
   // Auto-remove message after 5 seconds
   setTimeout(() => {
     alertDiv.remove();
