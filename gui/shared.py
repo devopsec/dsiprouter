@@ -3,12 +3,13 @@ import sys
 if sys.path[0] != '/etc/dsiprouter/gui':
     sys.path.insert(0, '/etc/dsiprouter/gui')
 
-import os, re, json, socket, logging, traceback, inspect, ssl
+import os, re, json, socket, logging, traceback, inspect, ssl, configparser
 from calendar import monthrange
 from importlib import reload
 from flask import request, render_template, make_response
 from werkzeug.utils import escape
 from werkzeug.urls import iri_to_uri
+from sqlalchemy import exc as sql_exceptions
 import settings
 
 
@@ -503,6 +504,61 @@ def getRequestData():
 
 
     return data
+
+def unallowed_settings():
+    """
+    Returns a list of settings that should not be modified via the API
+    :return: list of setting names
+    :rtype: list
+    """
+    return [
+        'FLT_',
+        'TELEBLOCK_',
+        'DSIP_LICENSE_STORE',
+        'DSIP_SESSION_KEY',
+        'CLOUD_PLATFORM',
+        'TRANSNEXUS_',
+        'STIR_SHAKEN_',
+        'MSTEAMS_',
+        'VERSION',  
+    ]
+
+def getAllowedSettings(settings_data):
+
+    clean_settings_data = {}
+    # Get rid of unallowed settings
+    for key in settings_data:
+        key_allowed = True
+        for item in unallowed_settings():
+            if key.startswith(item):
+                print(key + " is " + str(type(settings_data[key])) + ", not allowed, skipping")
+                key_allowed = False
+                break
+        if key_allowed:
+            if type(settings_data[key]) in (int, float, str, bool):
+                clean_settings_data[key] = settings_data[key]   
+            else:
+                print(key + " is " + str(type(settings_data[key])) + ", skipping")    
+    
+    return clean_settings_data
+
+def updateDsipLocalSettingsFromDict(field_dict, hot_reload=False):
+    """
+    Update local-only settings from a dict
+    :param field_dict:
+    :return:
+    """
+
+    CONFIG_FILE_PATH = "/etc/dsiprouter/gui/settings.py"
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE_PATH)
+    
+    for key, val in field_dict.items():
+        if hasattr(settings, key):
+            config.set('DEFAULT', key, val) 
+    
+    with open(CONFIG_FILE_PATH, 'w') as configfile:
+        config.write(configfile)    
 
 class StatusCodes():
     """
