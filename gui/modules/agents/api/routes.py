@@ -13,6 +13,7 @@ from modules.agents.db.dsip_agent import dSIPAgentInstruction as dSIPAgentInstru
 from sqlalchemy import exc as sql_exceptions
 from werkzeug import exceptions as http_exceptions
 from flask import render_template
+from util.containers import dockerContainer
 import settings
 
 # Setup some reusable variables and functions for the module
@@ -20,6 +21,47 @@ import settings
 OPENAI_BASE_URL = settings.OPENAI_BASE_URL if hasattr(settings, 'OPENAI_BASE_URL') else 'https://api.openai.com/v1'
 
 agents_api = numbers_api = Blueprint('agents', __name__, template_folder='../templates', static_folder='../static', static_url_path='/agents/static')
+
+class VoiceAgentContainer(dockerContainer):
+    def __init__(self, agent_name, agent_instructions=None, agent_api_key=None, webhook_secret=None, tools_api_keys=None, callback_email=None, greeting_message=None):
+        self.agent_name = agent_name
+        self.agent_instructions = agent_instructions
+        self.agent_api_key = agent_api_key
+        self.webhook_secret = webhook_secret
+        self.tools_api_keys = tools_api_keys
+        self.callback_email = callback_email
+        self.greeting_message = greeting_message
+        
+    def to_dict(self):
+        return {
+            'agent_name': self.agent_name,
+            'agent_instructions': self.agent_instructions,
+            'agent_api_key': self.agent_api_key,
+            'webhook_secret': self.webhook_secret,
+            'tools_api_keys': self.tools_api_keys,
+            'callback_email': self.callback_email,
+            'greeting_message': self.greeting_message
+        }
+    
+    def start(self,name):
+        # Placeholder for starting the agent
+        print(f"Starting agent: {self.agent_name}")
+        # Here you would add the logic to initialize and start the agent based on its configuration
+        # 
+    
+    def restart(self,name):
+        # Placeholder for restarting the agent
+        print(f"Restarting agent: {self.agent_name}")
+        # Here you would add the logic to gracefully restart the agent, which may involve stopping it first and then starting it again
+    
+    def stop(self,name):
+        # Placeholder for stopping the agent
+        print(f"Stopping agent: {self.agent_name}")
+        # Here you would add the logic to gracefully stop the agent and clean up resources   
+
+    
+
+
 
 
 
@@ -34,8 +76,9 @@ def _map_payload_to_agent(payload):
     mapped['instructions_id'] = payload.get('agent-instructions-id', payload.get('agent-instructions-id', payload.get('instructions_id', 0))) or 0
     mapped['guardrails'] = payload.get('agent-guardrails', payload.get('guardrails', ''))
     mapped['tools'] = payload.get('agent-tools', payload.get('tools', ''))
+    mapped['training_website'] = payload.get('agent-training-website', payload.get('training_website', ''))
     mapped['callback_email'] = payload.get('agent-callback-email', payload.get('callback_email', ''))
-    mapped['did_mappings'] = payload.get('agent-did-mapping', payload.get('did_mappings', ''))
+    mapped['did_mapping'] = payload.get('agent-did-mapping', payload.get('did_mapping', payload.get('did_mappings', '')))
     mapped['deployment_type'] = payload.get('agent-deployment-type', payload.get('deployment_type', ''))
     mapped['deployment_profile_id'] = payload.get('agent-deployment-profile-id', payload.get('deployment_profile_id', 0)) or 0
     return mapped
@@ -54,8 +97,8 @@ def _map_payload_to_instruction(payload):
 def get_agents_page():
     return render_template('agents.html')
 
-@agents_api.route('/api/v1/agent', methods=['GET'])
-@agents_api.route('/api/v1/agent/<int:agent_id>', methods=['GET'])
+@agents_api.route('/api/agents/v1/agent', methods=['GET'])
+@agents_api.route('/api/agents/v1/agent/<int:agent_id>', methods=['GET'])
 @api_security
 def get_agent(agent_id=None):
     db = DummySession()
@@ -79,7 +122,8 @@ def get_agent(agent_id=None):
         db.close()
 
 
-@agents_api.route('/api/v1/agent', methods=['POST'])
+@agents_api.route('/api/agents/v1', methods=['POST'])
+@agents_api.route('/api/agents/v1/agent', methods=['POST'])
 @api_security
 def create_agent():
     db = DummySession()
@@ -87,6 +131,7 @@ def create_agent():
         db = startSession()
         payload = getRequestData()
         mapped = _map_payload_to_agent(payload)
+        print(f'Mapped payload for agent creation: {mapped}')
 
         agent = dSIPAgent(
             name=mapped['name'],
@@ -99,7 +144,7 @@ def create_agent():
             training_website=mapped.get('training_website', ''),
             tools=mapped.get('tools', ''),
             callback_email=mapped.get('callback_email', ''),
-            did_mappings=mapped.get('did_mappings', ''),
+            did_mapping=mapped.get('did_mapping', ''),
             deployment_type=mapped.get('deployment_type', ''),
             deployment_profile_id=int(mapped.get('deployment_profile_id', 0)),
         )
@@ -117,7 +162,7 @@ def create_agent():
         db.close()
 
 
-@agents_api.route('/api/v1/agent/<int:agent_id>', methods=['PUT'])
+@agents_api.route('/api/agents/v1/<int:agent_id>', methods=['PUT'])
 @api_security
 def update_agent(agent_id):
     db = DummySession()
@@ -149,7 +194,7 @@ def update_agent(agent_id):
         db.close()
 
 
-@agents_api.route('/api/v1/agents/<int:agent_id>', methods=['DELETE'])
+@agents_api.route('/api/agents/v1/<int:agent_id>', methods=['DELETE'])
 @api_security
 def delete_agent(agent_id):
     db = DummySession()

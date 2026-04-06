@@ -25,15 +25,17 @@ class dSIPAgent(Base):
     # column name is `type` in the DB; using attribute name `type` here
     # is acceptable and follows existing project patterns.
     type = Column('type', String(128), nullable=False)
-    project_id = Column('project-id', String(255), nullable=False)
-    greeting_message = Column('greeting-message', String(512), nullable=False)
+    project_id = Column('project_id', String(255), nullable=False)
+    greeting_message = Column('greeting_message', String(512), nullable=False)
     instructions = Column(String(1024), nullable=False)
     instructions_id = Column('instructions_id', Integer, nullable=False, default=0)
     guardrails = Column(String(255), nullable=False, default='')
+    training_website = Column('training_website', String(255), nullable=False, default='')
     tools = Column(String(255), nullable=False, default='')
-    callback_email = Column('callback-email', String(255), nullable=False, default='')
-    deployment_type = Column('deployment-type', String(255), nullable=False, default='')
-    deployment_profile_id = Column('deployment-profile-id', Integer, nullable=False, default=0)
+    callback_email = Column('callback_email', String(255), nullable=False, default='')
+    did_mapping = Column('did_mapping', String(255), nullable=False, default='')
+    deployment_type = Column('deployment_type', String(255), nullable=False, default='')
+    deployment_profile_id = Column('deployment_profile_id', Integer, nullable=False, default=0)
     created_at = Column('created_at', DateTime,
                         server_default=text('CURRENT_TIMESTAMP'),
                         server_onupdate=text('CURRENT_TIMESTAMP'))
@@ -45,7 +47,7 @@ class dSIPAgent(Base):
 
     def __init__(self, name, type, project_id, greeting_message, instructions,
                  instructions_id=0, guardrails='', tools='', callback_email='',
-                 deployment_type='', deployment_profile_id=0, status=0, error=''):
+                 training_website='', did_mapping='', deployment_type='', deployment_profile_id=0, status=0, error=''):
         self.name = name
         self.type = type
         self.project_id = project_id
@@ -55,6 +57,8 @@ class dSIPAgent(Base):
         self.guardrails = guardrails
         self.tools = tools
         self.callback_email = callback_email
+        self.training_website = training_website
+        self.did_mapping = did_mapping
         self.deployment_type = deployment_type
         self.deployment_profile_id = deployment_profile_id
         self.status = status
@@ -66,15 +70,17 @@ class dSIPAgent(Base):
             'id': getattr(self, 'id', None),
             'name': self.name,
             'type': self.type,
-            'project-id': self.project_id,
-            'greeting-message': self.greeting_message,
+            'project_id': self.project_id,
+            'greeting_message': self.greeting_message,
             'instructions': self.instructions,
             'instructions_id': self.instructions_id,
             'guardrails': self.guardrails,
             'tools': self.tools,
-            'callback-email': self.callback_email,
-            'deployment-type': self.deployment_type,
-            'deployment-profile-id': self.deployment_profile_id,
+            'callback_email': self.callback_email,
+            'training_website': self.training_website,
+            'did_mapping': self.did_mapping,
+            'deployment_type': self.deployment_type,
+            'deployment_profile_id': self.deployment_profile_id,
             'created_at': getattr(self, 'created_at', None),
             'modified_at': getattr(self, 'modified_at', None),
             'status': self.status,

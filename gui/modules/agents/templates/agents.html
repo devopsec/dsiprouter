@@ -12,9 +12,9 @@
   </div>
 
   <div class="tableAddButton">
-    <button id='open-Add' class='btn btn-primary btn-md' data-title="Add" data-toggle="modal"
+    <button id='open-Add' class='btn btn-success btn-md' data-title="Add" data-toggle="modal"
             data-target="#add">
-      + Add
+      Add
     </button>
   </div>
 {% endblock %}
@@ -27,8 +27,8 @@
       <th data-field="id">ID</th>
       <th data-field="name">Name</th>
       <th data-field="type">Type</th>
-       <th data-field="status">Status</th>
-      <th data-field="did-mappings">Assigned Inbound Route</th>
+      <th data-field="status">Status</th>
+      <th data-field="did_mapping">Assigned Inbound Route</th>
     </tr>
     </thead>
   </table>
@@ -114,7 +114,7 @@
 
       <div class="form-group">
       <div class="radio">
-          <select class="agent_type form-control" name="agent_type">
+          <select class="agent_type form-control" name="agent_type" id="agent_type">
             <option value="">Select Voice Agent API</option>
             <option value="openai">OpenAI - Realtime</option>
             <option value="livekit">LiveKit (Coming Soon)</option>
@@ -123,7 +123,7 @@
       </div>
       <div class="form-group">
       <div class="radio">
-          <select class="project_id form-control" name="project_id">
+          <select class="project_id form-control" name="project_id" id="project_id">
             <option value="">Select Project ID</option>
           </select>
        </div>
@@ -141,9 +141,13 @@
           </select>
         </div>
       </div>
+       <div class="form-group">
+        <input class="callback_email form-control" type="text" id="callback_email" name="callback_email" placeholder="Tool Notification Email" value=""
+               autofocus="autofocus">
+      </div>
       <div class="form-group">
         <div class="radio">
-          <select class="predefined_instructions form-control" name="predefined_instructions">
+          <select class="predefined_instructions form-control" name="predefined_instructions" id="predefined_instructions">
             <option value="">Select Pre-defined Agent Instructions</option>
             <option value="instruction_1">Inbound Lead Generation</option>
             <option value="instruction_2">Inbound Customer Support</option>

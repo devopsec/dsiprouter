@@ -72,11 +72,12 @@
 		}
 
     var requestPayload = {};
-    requestPayload.type= modal_body.find("input#agent_type").val();
-    requestPayload.project_id = modal_body.find("input#project_id").val();
+    requestPayload.type= modal_body.find("select#agent_type").val();
+    requestPayload.project_id = modal_body.find("select#project_id").val();
     requestPayload.name = modal_body.find("input#agent_name").val();
-    requestPayload.tools = modal_body.find("input#toolchain").val();
-    requestPayload.instructions = modal_body.find("select#instructions").val();
+    requestPayload.tools = modal_body.find("select#toolchain").val();
+    requestPayload.callback_email = modal_body.find("input#callback_email").val();
+    requestPayload.instructions = modal_body.find("textarea#agent_instructions").val();
     
     
 
@@ -175,17 +176,29 @@ function deleteEntity() {
   }
 
 	$(document).ready(function() {
+
+  
+    var url = CUSTOM_MODULE_API_BASE_URL + "agents/v1/agent";
+
 		// datatable init
-		table = $('#' + ENTITY).DataTable({
+		table = $('#' + ENTITY + "_table").DataTable({
 			"ajax": {
-				"url": API_BASE_URL + ENTITY
+				"url": url
 			},
 			"columns": [
 				{"data": "id"},
-				{"data": "domain"},
+				{"data": "name"},
 				{"data": "type"},
-				{"data": "assigned_domains"}
-				//{ "data": "gwlist", visible: false },
+				{"data": null, render: function(data, type, row) {
+          if (data.status === "0") {
+            return "Stopped <button class='btn btn-success btn-xs agent_stopped'><span class='glyphicon glyphicon-play'></span></button>";
+          }
+          else if (data.status === "1") {
+            return "Started <button class='btn btn-warning btn-xs agent_started'><span class='glyphicon glyphicon-stop'></span></button>";
+          }
+         }
+        },
+        {"data": "did_mapping"},
 			],
 			"order": [[1, 'asc']]
 		});
@@ -209,9 +222,9 @@ function deleteEntity() {
 		});
 
 
-    fetch('/api/agents/v1/instructions')
+  /*  fetch('/api/agents/v1/instructions')
       .then(response => response.json())
-      .then(results => {
+     .then(results => {
         var instructions_select = document.querySelector(".predefined_instructions");
         instructions_select.innerHTML = "<option value=''>Select Instruction Set</option>";
         results.data.forEach(instruction_set => {
@@ -221,7 +234,7 @@ function deleteEntity() {
           instructions_select.appendChild(option);
         });
     })
-
+*/
 
 $('.predefined_instructions').change(function() {
 
