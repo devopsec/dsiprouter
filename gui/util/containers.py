@@ -1,0 +1,63 @@
+import docker
+
+
+class dockerContainer:
+    def __init__(self, container_name, image_name, environment_vars=None, ports=None):
+        self.container_name = container_name
+        self.image_name = image_name
+        self.environment_vars = environment_vars or {}
+        self.ports = ports or {}
+        self.client = docker.from_env()
+        self.container = None
+
+    def start(self):
+        try:
+            self.container = self.client.containers.run(
+                self.image_name,
+                name=self.container_name,
+                environment=self.environment_vars,
+                ports=self.ports,
+                detach=True
+            )
+            print(f"Container '{self.container_name}' started successfully.")
+        except docker.errors.APIError as e:
+            print(f"Error starting container '{self.container_name}': {e}")
+
+    def stop(self):
+        if self.container:
+            try:
+                self.container.stop()
+                print(f"Container '{self.container_name}' stopped successfully.")
+            except docker.errors.APIError as e:
+                print(f"Error stopping container '{self.container_name}': {e}")
+        else:
+            print(f"Container '{self.container_name}' is not running.") 
+    
+    @staticmethod
+    def staticStatus(container_name=None):
+            docker_client = docker.from_env()
+            try:                
+                container = docker_client.containers.get(container_name)
+                return container.status
+            except docker.errors.NotFound:
+                return "not running"
+    
+    def status(self):
+        if self.container:
+            try:
+                self.container.reload()  # Refresh container data
+                return self.container.status
+            except docker.errors.APIError as e:
+                print(f"Error checking status of container '{self.container_name}': {e}")
+                return "error"
+        elif not self.container:
+            # Check if the container exists but is not running
+            try:
+                existing_container = self.client.containers.get(self.container_name)
+                return existing_container.status
+            except docker.errors.NotFound:
+                 return "not running"   
+        else:
+            return "not running"
+    
+

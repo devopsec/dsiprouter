@@ -45,9 +45,11 @@
   }
 
 	function addEntity(action) {
-		var selector, modal_body
+		var selector, modal_body, url
 		var requestPayload = {};
 		
+    url = CUSTOM_MODULE_API_BASE_URL + "agents/v1/agent";
+
 
 		// The default action is a POST
 		if (typeof action === "undefined") {
@@ -58,7 +60,7 @@
 			action = "POST";
 			selector = "#add";
 			modal_body = $(selector + ' .modal-body');
-      requestPayload.domain = modal_body.find("#domain").val()
+      //requestPayload.domain = modal_body.find("#domain").val()
 
 		}
     else if (action === "PUT") {
@@ -69,97 +71,29 @@
 
 		}
 
+    var requestPayload = {};
+    requestPayload.type= modal_body.find("select#agent_type").val();
+    requestPayload.project_id = modal_body.find("select#project_id").val();
+    requestPayload.name = modal_body.find("input#agent_name").val();
+    requestPayload.tools = modal_body.find("select#toolchain").val();
+    requestPayload.callback_email = modal_body.find("input#callback_email").val();
+    requestPayload.instructions = modal_body.find("textarea#agent_instructions").val();
+    
+    
 
 
-		if (modal_body.find("#certtype_generate").is(':checked') || (modal_body.find("#certtype_generate2").is(':checked'))) {
-				requestPayload.type = "generated"
-        addGenerated(requestPayload,action)
-		}
-		else {
-				requestPayload.type = "uploaded"
-        addUploaded(requestPayload,action)
-		}
-}
-
-
-function addUploaded (requestPayload,action) {
-
-  var formData = new FormData(document.querySelector('#addAgentForm'))
-
-  $.ajax({
-    url: API_BASE_URL + ENTITY + "/upload/" + requestPayload.domain,
-    type: 'POST',
-    data: formData,
-    async: false,
-    cache: false,
-    contentType: false,
-    processData: false,
-    success: function(response, text_status, xhr) {    
-      var btn;
-      var id_int = response.data[0].id;
-
-      // Update the Add Button and the table
-      if (action === "POST") {
-        btn = $('#add .modal-footer').find('#addButton');
-        btn.removeClass("btn-primary");
-      }
-      else {
-        btn = $('#edit .modal-footer').find('#updateButton');
-        btn.removeClass("btn-warning");
-      }
-
-      btn.addClass("btn-success");
-      btn.html("<span class='glyphicon glyphicon-check'></span>Saved!");
-      btn.attr("disabled", true);
-
-      showNotification("Certificates were uploaded");
-
-      if (action === "POST") {
-        table.row.add({
-          "id": id_int,
-          "domain": requestPayload.domain,
-          "type": requestPayload.type,
-          "assigned_domains": ''
-        }).draw();
-      }
-    },
-    error: function(xhr, text_status, error_msg) {
-      showNotification("Certificates were NOT uploaded", true);
-    }
-  });
-
-  return false;
-
-}
-
-function addGenerated(requestPayload,action) {
-		// Put into JSON Message and send over
-      if (action === "POST")
-          var btn = $('#add .modal-footer').find('#addButton').prop('disabled', true);
-      else {
-        var btn = $('#edit .modal-footer').find('#updateButton').prop('disabled', true);
-      }
-
+    // Put into JSON Message and send over
     $.ajax({
       type: action,
-      url: API_BASE_URL + ENTITY,
+      url: url,
       dataType: "json",
       contentType: "application/json; charset=utf-8",
       data: JSON.stringify(requestPayload),
       success: function(response, textStatus, jqXHR) {
-
-        var id_int = response.data[0].id;
-
-        setTimeout(function() {
-  			var add_modal = $('#add');
-  				if (add_modal.is(':visible')) {
-  					add_modal.modal('hide');
-  				}
-  			}, 1500);
+        var btn;
 
         // Update the Add Button and the table
         if (action === "POST") {
-
           btn = $('#add .modal-footer').find('#addButton');
           btn.removeClass("btn-primary");
         }
@@ -169,28 +103,56 @@ function addGenerated(requestPayload,action) {
         }
 
         btn.addClass("btn-success");
-        btn.html("<span class='glyphicon glyphicon-check'></span>Saved!");
+        btn.html("<span class='glyphicon glyphicon-check'></span> Saved!");
         btn.attr("disabled", true);
 
+        // Update Reload buttons if the number was assigned
+        if(requestPayload.status === "assigned") {
+          reloadKamRequired(true);
+        }
+
         if (action === "POST") {
-          table.row.add({
-            "id": id_int,
-            "domain": requestPayload.domain,
-            "type": requestPayload.type,
-            "assigned_domains": ''
+          agents_table.row.add({
+            "id": response.data[0].id,
+            "name": requestPayload.agent_name,
+            "type": requestPayload.agent_type,
+            "status": response.data[0].status,
+            "did-mappings": response.data[0].did-mappings
+          }).draw();
+
+          // Clear the form fields for next entry
+           clearFormFields("#add");
+        }
+         
+        else {
+          agents_table.row(function(idx, data, node) {
+            return data.id === response.data[0].id;
+          }).data({
+            "id": response.data[0].id,
+            "name": requestPayload.agent_name,
+            "type": requestPayload.agent_type,
+            "status": response.data[0].status,
+            "did-mappings": response.data[0].did-mappings
           }).draw();
         }
-      /*  else {
-          table.row(function(idx, data, node) {
-            return data.id === id_int;
-          }).data({
-            "domain": requestPayload.domain,
-            "id": id_int
-          }).draw();
-        }*/
+
+       
+
+      },
+      error: function(jqXHR, textStatus, errorThrown) {
+        var responseText = jQuery.parseJSON(jqXHR.responseText);
+        if (action === "POST") {
+          var messageText = "Add Failed: " + responseText["msg"];
+        }
+        else {
+          var messageText = "Update Failed: " + responseText["msg"];
+        } 
+        showNotification(messageText, true);
       }
     });
-	}
+
+}
+
 
 function deleteEntity() {
     var id_int = parseInt(id, 10);
@@ -214,17 +176,29 @@ function deleteEntity() {
   }
 
 	$(document).ready(function() {
+
+  
+    var url = CUSTOM_MODULE_API_BASE_URL + "agents/v1/agent";
+
 		// datatable init
-		table = $('#' + ENTITY).DataTable({
+		table = $('#' + ENTITY + "_table").DataTable({
 			"ajax": {
-				"url": API_BASE_URL + ENTITY
+				"url": url
 			},
 			"columns": [
 				{"data": "id"},
-				{"data": "domain"},
+				{"data": "name"},
 				{"data": "type"},
-				{"data": "assigned_domains"}
-				//{ "data": "gwlist", visible: false },
+				{"data": null, render: function(data, type, row) {
+          if (data.status === "0") {
+            return "Stopped <button class='btn btn-success btn-xs agent_stopped'><span class='glyphicon glyphicon-play'></span></button>";
+          }
+          else if (data.status === "1") {
+            return "Started <button class='btn btn-warning btn-xs agent_started'><span class='glyphicon glyphicon-stop'></span></button>";
+          }
+         }
+        },
+        {"data": "did_mapping"},
 			],
 			"order": [[1, 'asc']]
 		});
@@ -246,6 +220,37 @@ function deleteEntity() {
       }
 			}
 		});
+
+
+  /*  fetch('/api/agents/v1/instructions')
+      .then(response => response.json())
+     .then(results => {
+        var instructions_select = document.querySelector(".predefined_instructions");
+        instructions_select.innerHTML = "<option value=''>Select Instruction Set</option>";
+        results.data.forEach(instruction_set => {
+          var option = document.createElement("option");
+          option.value = instruction_set.id;
+          option.textContent = instruction_set.name + " - " + instruction_set.id;
+          instructions_select.appendChild(option);
+        });
+    })
+*/
+
+$('.predefined_instructions').change(function() {
+
+  var instruction_id = $(this).val();
+  if (instruction_id) {
+    fetch('/api/agents/v1/instructions/' + instruction_id)
+      .then(response => response.json())
+      .then(result => {
+        $(".agent_instructions").val(result.data[0].instructions);
+      })
+  }
+  else {
+    $(".agent_instructions").val("");
+  }
+
+})
 
 
 $('#open-Add').click(function() {
@@ -273,89 +278,9 @@ $('#deleteButton').click(function() {
   deleteEntity();
 });
 
-$("#domain").keyup(function () {
-	var value = document.getElementById("domain").value;
-	console.log(value);
-	if (value.includes("*")) {
-
-		var command = "certbot certonly --manual -d " +
-      value + ' --server https://acme-v02.api.letsencrypt.org/directory' +
-      '--force-renewal --preferred-chain "ISRG Root X1"';
-		$("#terminalCommand").text(command);
-		$("#terminalDiv").removeClass("hide");
-    $("#certtype_generated").prop('checked', true);
-      var btn = $('#add .modal-footer').find('#addButton');
-      btn.attr('disabled', true);
-	}
-	else{
-
-		$("#terminalDiv").addClass("hide");
-
-	}
-
-})
-
-$("#domain2").keyup(function () {
-	var value = document.getElementById("domain").value;
-	console.log(value);
-	if (value.includes("*")) {
-
-    var command = "certbot certonly --manual -d " +
-      value + ' --server https://acme-v02.api.letsencrypt.org/directory' +
-      '--force-renewal --preferred-chain "ISRG Root X1"';
-		$("#terminalCommand2").text(command);
-		$("#terminalDiv2").removeClass("hide");
-    $("#certtype_generated2").prop('checked', true);
-      var btn = $('#edit .modal-footer').find('#editButton');
-      btn.attr('disabled', true);
-	}
-	else {
-
-		$("#terminalDiv").addClass("hide");
-    
-	}
-
-})
 
 
-$("#certtype_generate2").change(function () {
 
-	$("#generate2").removeClass("hide");
-	$("#uploaded2").addClass("hide");
-})
-
-$("#certtype_upload2").change(function () {
-
-	$("#generate2").addClass("hide");
-	$("#uploaded2").removeClass("hide");
-})
-
-$("#certtype_generate").change(function () {
-
-	$("#generate").removeClass("hide");
-	$("#uploaded").addClass("hide");
-})
-
-$("#certtype_upload").change(function () {
-
-	$("#generate").addClass("hide");
-	$("#uploaded").removeClass("hide");
-			
-})
-
-$("#replace_default_cert").change(function () {
-
-	if ($("#replace_default_cert").is(':checked')) {
-		$("#domain").val("default");
-		$("#domain").attr('disabled',true);
-	}
-	else {
-		$("#domain").val("");
-		$("#domain").attr('disabled',false);
-
-	}
-
-})
 
 
 $('#add').on('show.bs.modal', function() {
@@ -414,6 +339,38 @@ $(".close").click(function () {
 	$("#certtype_generate").prop('selected', true);
 })
 
+$(".agent_type").change(function () {
+
+  if ($(".agent_type").val() == "openai") {
+
+    // Get List of Projects for the provider and populate the project_id dropdown
+      fetch('/api/agents/v1/projects/' + $(".agent_type").val())
+        .then(response => response.json())
+        .then(results => {
+          var project_select = document.querySelector(".project_id");
+          project_select.innerHTML = "<option value=''>Select Project ID</option>";
+          results.data.forEach(project => {
+            var option = document.createElement("option");
+            option.value = project.id;
+            option.textContent = project.name + " - " + project.id;
+            project_select.appendChild(option);
+          });
+    })
+  }
+  else {
+    var project_select = document.querySelector(".project_id");
+    project_select.innerHTML = "<option value=''>Select Project ID</option>";
+  } 
+
 })
+
+$(".project_id").change(function () {
+
+  $(".agent_name").val($(".project_id").find("option:selected").text() + " " + "agent");
+
+});
+
+
+});
 
 })(window, document);

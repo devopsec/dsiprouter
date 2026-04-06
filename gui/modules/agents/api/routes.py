@@ -1,4 +1,6 @@
 import sys, os
+
+import requests
 if sys.path[0] != '/etc/dsiprouter/gui':
     sys.path.insert(0, '/etc/dsiprouter/gui')
 
@@ -7,11 +9,60 @@ from database import startSession, DummySession
 from modules.api.api_functions import createApiResponse, showApiError, api_security
 from shared import getRequestData, rowToDict
 from modules.agents.db.dsip_agent import dSIPAgent as dSIPAgent
+from modules.agents.db.dsip_agent import dSIPAgentInstruction as dSIPAgentInstruction
 from sqlalchemy import exc as sql_exceptions
 from werkzeug import exceptions as http_exceptions
 from flask import render_template
+from util.containers import dockerContainer
+import settings
 
-agents = Blueprint('agents', __name__)
+# Setup some reusable variables and functions for the module
+# Set OPENAI_BASE_URL from settings or use default
+OPENAI_BASE_URL = settings.OPENAI_BASE_URL if hasattr(settings, 'OPENAI_BASE_URL') else 'https://api.openai.com/v1'
+
+agents_api = numbers_api = Blueprint('agents', __name__, template_folder='../templates', static_folder='../static', static_url_path='/agents/static')
+
+class VoiceAgentContainer(dockerContainer):
+    def __init__(self, agent_name, agent_instructions=None, agent_api_key=None, webhook_secret=None, tools_api_keys=None, callback_email=None, greeting_message=None):
+        self.agent_name = agent_name
+        self.agent_instructions = agent_instructions
+        self.agent_api_key = agent_api_key
+        self.webhook_secret = webhook_secret
+        self.tools_api_keys = tools_api_keys
+        self.callback_email = callback_email
+        self.greeting_message = greeting_message
+        
+    def to_dict(self):
+        return {
+            'agent_name': self.agent_name,
+            'agent_instructions': self.agent_instructions,
+            'agent_api_key': self.agent_api_key,
+            'webhook_secret': self.webhook_secret,
+            'tools_api_keys': self.tools_api_keys,
+            'callback_email': self.callback_email,
+            'greeting_message': self.greeting_message
+        }
+    
+    def start(self,name):
+        # Placeholder for starting the agent
+        print(f"Starting agent: {self.agent_name}")
+        # Here you would add the logic to initialize and start the agent based on its configuration
+        # 
+    
+    def restart(self,name):
+        # Placeholder for restarting the agent
+        print(f"Restarting agent: {self.agent_name}")
+        # Here you would add the logic to gracefully restart the agent, which may involve stopping it first and then starting it again
+    
+    def stop(self,name):
+        # Placeholder for stopping the agent
+        print(f"Stopping agent: {self.agent_name}")
+        # Here you would add the logic to gracefully stop the agent and clean up resources   
+
+    
+
+
+
 
 
 def _map_payload_to_agent(payload):
@@ -25,19 +76,29 @@ def _map_payload_to_agent(payload):
     mapped['instructions_id'] = payload.get('agent-instructions-id', payload.get('agent-instructions-id', payload.get('instructions_id', 0))) or 0
     mapped['guardrails'] = payload.get('agent-guardrails', payload.get('guardrails', ''))
     mapped['tools'] = payload.get('agent-tools', payload.get('tools', ''))
+    mapped['training_website'] = payload.get('agent-training-website', payload.get('training_website', ''))
     mapped['callback_email'] = payload.get('agent-callback-email', payload.get('callback_email', ''))
-    mapped['did_mappings'] = payload.get('agent-did-mapping', payload.get('did_mappings', ''))
+    mapped['did_mapping'] = payload.get('agent-did-mapping', payload.get('did_mapping', payload.get('did_mappings', '')))
     mapped['deployment_type'] = payload.get('agent-deployment-type', payload.get('deployment_type', ''))
     mapped['deployment_profile_id'] = payload.get('agent-deployment-profile-id', payload.get('deployment_profile_id', 0)) or 0
     return mapped
 
 
-@agents.route('/agents', methods=['GET'])
+def _map_payload_to_instruction(payload):
+    # Map incoming payload keys to dSIPAgentInstruction attributes
+    mapped = {}
+    mapped['name'] = payload.get('instruction-name', payload.get('name', ''))
+    mapped['project_type'] = payload.get('instruction-project-type', payload.get('project_type', 'openai')) or 'openai'
+    mapped['instructions'] = payload.get('instruction-text', payload.get('instructions', ''))
+    return mapped
+
+
+@agents_api.route('/gui/agents', methods=['GET'])
 def get_agents_page():
     return render_template('agents.html')
 
-@agents.route('/api/v1/agent', methods=['GET'])
-@agents.route('/api/v1/agent/<int:agent_id>', methods=['GET'])
+@agents_api.route('/api/agents/v1/agent', methods=['GET'])
+@agents_api.route('/api/agents/v1/agent/<int:agent_id>', methods=['GET'])
 @api_security
 def get_agent(agent_id=None):
     db = DummySession()
@@ -61,7 +122,8 @@ def get_agent(agent_id=None):
         db.close()
 
 
-@agents.route('/api/v1/agent', methods=['POST'])
+@agents_api.route('/api/agents/v1', methods=['POST'])
+@agents_api.route('/api/agents/v1/agent', methods=['POST'])
 @api_security
 def create_agent():
     db = DummySession()
@@ -69,6 +131,7 @@ def create_agent():
         db = startSession()
         payload = getRequestData()
         mapped = _map_payload_to_agent(payload)
+        print(f'Mapped payload for agent creation: {mapped}')
 
         agent = dSIPAgent(
             name=mapped['name'],
@@ -81,7 +144,7 @@ def create_agent():
             training_website=mapped.get('training_website', ''),
             tools=mapped.get('tools', ''),
             callback_email=mapped.get('callback_email', ''),
-            did_mappings=mapped.get('did_mappings', ''),
+            did_mapping=mapped.get('did_mapping', ''),
             deployment_type=mapped.get('deployment_type', ''),
             deployment_profile_id=int(mapped.get('deployment_profile_id', 0)),
         )
@@ -99,7 +162,7 @@ def create_agent():
         db.close()
 
 
-@agents.route('/api/v1/agent/<int:agent_id>', methods=['PUT'])
+@agents_api.route('/api/agents/v1/<int:agent_id>', methods=['PUT'])
 @api_security
 def update_agent(agent_id):
     db = DummySession()
@@ -131,7 +194,7 @@ def update_agent(agent_id):
         db.close()
 
 
-@agents.route('/api/v1/agent/<int:agent_id>', methods=['DELETE'])
+@agents_api.route('/api/agents/v1/<int:agent_id>', methods=['DELETE'])
 @api_security
 def delete_agent(agent_id):
     db = DummySession()
@@ -153,3 +216,137 @@ def delete_agent(agent_id):
         return showApiError(ex)
     finally:
         db.close()
+
+
+@agents_api.route('/api/agents/v1/instructions', methods=['GET'])
+@agents_api.route('/api/agents/v1/instructions/<int:instruction_id>', methods=['GET'])
+@api_security
+def get_agent_instructions(instruction_id=None):
+    db = DummySession()
+    try:
+        db = startSession()
+        if instruction_id is None:
+            instructions = db.query(dSIPAgentInstruction).all()
+            data = [rowToDict(instruction) for instruction in instructions]
+            return createApiResponse(msg='Instructions retrieved', data=data)
+
+        instruction = db.query(dSIPAgentInstruction).filter(dSIPAgentInstruction.id == instruction_id).first()
+        if instruction is None:
+            raise http_exceptions.NotFound('Instruction not found')
+
+        return createApiResponse(msg='Instruction retrieved', data=[rowToDict(instruction)])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@agents_api.route('/api/agents/v1/instructions', methods=['POST'])
+@api_security
+def create_agent_instruction():
+    db = DummySession()
+    try:
+        db = startSession()
+        payload = getRequestData()
+        mapped = _map_payload_to_instruction(payload)
+
+        instruction = dSIPAgentInstruction(
+            name=mapped['name'],
+            project_type=mapped['project_type'],
+            instructions=mapped['instructions'],
+        )
+
+        db.add(instruction)
+        db.flush()
+        db.commit()
+
+        return createApiResponse(msg='Instruction created', data=[rowToDict(instruction)])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@agents_api.route('/api/agents/v1/instructions/<int:instruction_id>', methods=['PUT'])
+@api_security
+def update_agent_instruction(instruction_id):
+    db = DummySession()
+    try:
+        db = startSession()
+        payload = getRequestData()
+        mapped = _map_payload_to_instruction(payload)
+
+        instruction = db.query(dSIPAgentInstruction).filter(dSIPAgentInstruction.id == instruction_id).first()
+        if instruction is None:
+            raise http_exceptions.NotFound('Instruction not found')
+
+        for k, v in mapped.items():
+            if hasattr(instruction, k):
+                setattr(instruction, k, v)
+
+        db.add(instruction)
+        db.flush()
+        db.commit()
+
+        return createApiResponse(msg='Instruction updated', data=[rowToDict(instruction)])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@agents_api.route('/api/agents/v1/instructions/<int:instruction_id>', methods=['DELETE'])
+@api_security
+def delete_agent_instruction(instruction_id):
+    db = DummySession()
+    try:
+        db = startSession()
+
+        instruction = db.query(dSIPAgentInstruction).filter(dSIPAgentInstruction.id == instruction_id).first()
+        if instruction is None:
+            raise http_exceptions.NotFound('Instruction not found')
+
+        db.delete(instruction)
+        db.flush()
+        db.commit()
+
+        return createApiResponse(msg='Instruction deleted', data=[{'id': instruction_id}])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@agents_api.route('/api/agents/v1/projects/<string:provider>', methods=['GET'])
+@api_security
+def get_projects_by_provider(provider):
+    db = DummySession()
+
+    if provider.lower() != 'openai':
+        return showApiError(f'Provider {provider} not supported', code=400) 
+    try:
+        headers = {'Authorization': f'Bearer {settings.OPENAI_API_KEY}'
+                   , 'Content-Type': 'application/json'}
+       
+        print(headers)
+        r = requests.get(f'{OPENAI_BASE_URL}/organization/projects', headers=headers)
+        if r.status_code != 200:
+            raise http_exceptions.InternalServerError(f'Failed to retrieve projects from provider: {provider}. \
+                 HTTP Return Status Code {r.status_code}: {r.reason}')
+        projects = r.json().get('data', [])
+        return createApiResponse(msg='Projects retrieved', data=projects)
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
