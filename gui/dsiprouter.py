@@ -194,6 +194,28 @@ def backupandrestore():
         return showError(type=error)
 
 
+@app.route('/settings')
+def ui_settings():
+    try:
+        if (settings.DEBUG):
+            debugEndpoint()
+
+        if not session.get('logged_in'):
+            return render_template('index.html', version=settings.VERSION)
+        else:
+            action = request.args.get('action')
+            return render_template('settings.html', show_add_onload=action, version=settings.VERSION)
+
+
+    except http_exceptions.HTTPException as ex:
+        debugException(ex)
+        return showError(type='http', code=ex.code, msg=ex.description)
+    except Exception as ex:
+        debugException(ex, log_ex=False, print_ex=True, showstack=False)
+        error = "server"
+        return showError(type=error)
+
+
 @app.route('/certificates')
 def certificates():
     try:
@@ -2337,6 +2359,7 @@ def injectGlobals():
 # DEPRECATED: updating network settings portion of this function has moved to the CLI
 #             marked for refactoring in v0.80 as shown below
 #               def syncSettings(new_fields={}):
+
 def syncSettings(new_fields={}, update_net=False):
     """
     Synchronize settings.py with shared mem / db
@@ -2391,7 +2414,6 @@ def syncSettings(new_fields={}, update_net=False):
         debugException(ex)
         IO.printerr('Could Not Update dsip_settings Database Table')
         raise
-
 
 def sigHandler(signum=None, frame=None):
     """ Logic for trapped signals """

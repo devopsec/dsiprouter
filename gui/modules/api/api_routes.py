@@ -14,9 +14,10 @@ from werkzeug import exceptions as http_exceptions
 from werkzeug.utils import secure_filename
 from database import startSession, DummySession, Address, dSIPNotification, dSIPMultiDomainMapping, Gateways, \
     GatewayGroups, Subscribers, dSIPLeases, dSIPMaintModes, dSIPCallSettings, InboundMapping, dSIPCDRInfo, \
-    dSIPCertificates, Dispatcher, dSIPDNIDEnrichment
+    dSIPCertificates, Dispatcher, dSIPDNIDEnrichment, getDsipSettingsTableAsDict, updateDsipSettingsTable
 from shared import allowed_file, dictToStrFields, isCertValid, rowToDict, debugEndpoint, StatusCodes, \
-    strFieldsToDict, getRequestData, IO
+    strFieldsToDict, getRequestData, IO, objToDict, getAllowedSettings,updateDsipLocalSettingsFromDict, \
+    updateConfig
 from util.pyasync import daemonize
 from util.ipc import STATE_SHMEM_NAME, getSharedMemoryDict
 from modules.api.api_functions import createApiResponse, showApiError, api_security
@@ -3549,3 +3550,112 @@ def uploadCertificates(domain=None):
         return showApiError(ex)
     finally:
         db.close()
+
+
+@api.route("/api/v1/settings", methods=['GET'])
+@api_security
+def getSettings():
+    """Get all current settings from the database"""
+    try:
+        if settings.DEBUG:
+            debugEndpoint()
+
+        if settings.LOAD_SETTINGS_FROM == 'file':
+            settings_data = objToDict(settings)
+        else:
+            # Get DB-backed settings
+            settings_data = getDsipSettingsTableAsDict(settings.DSIP_ID)
+        
+        clean_settings_data = getAllowedSettings(settings_data)  # ensure allowed settings are loaded  
+    
+        return createApiResponse(
+            msg='Settings retrieved',
+            data=[clean_settings_data] if clean_settings_data else [],
+        )
+    except Exception as ex:
+        return showApiError(ex)
+
+
+@api.route("/api/v1/settings", methods=['POST'])
+@api_security
+def addSetting():
+    """Add or create a new setting"""
+    try:
+        if settings.DEBUG:
+            debugEndpoint()
+
+        payload = getRequestData()
+        key = payload.get('key', '').strip()
+        value = payload.get('value', '')
+
+        if not key:
+            raise http_exceptions.BadRequest('key is required')
+
+        # Validate key is a valid Python identifier
+        if not key.replace('_', '').isalnum() or (not key[0].isalpha() and key[0] != '_'):
+            raise http_exceptions.BadRequest('Invalid key format; must be a valid Python identifier')
+
+        # Update settings in the database
+        update_dict = {key: value}
+
+        # Update the settings.py file and reload in memory
+        # Todo: add the ability to add new settings in the settings.py and add it to the database
+        updateConfig(settings,update_dict, True)
+        
+        # Reload settings from DB
+        updated_settings = getAllowedSettings(getDsipSettingsTableAsDict(settings.DSIP_ID))
+
+        return createApiResponse(
+            msg='Setting added',
+            data=[updated_settings] if updated_settings else [update_dict],
+        )
+    except Exception as ex:
+        return showApiError(ex)
+
+
+@api.route("/api/v1/settings/<key>", methods=['PUT'])
+@api_security
+def updateSetting(key):
+    """Update an existing setting"""
+    try:
+        if settings.DEBUG:
+            debugEndpoint()
+
+        payload = getRequestData()
+        value = payload.get('value', '')
+        
+        update_dict = {key: value}
+
+        # Update the settings.py file and reload in memory
+        updateConfig(settings,update_dict, True)
+        
+        # Reload settings from DB
+        clean_settings_data = getAllowedSettings(getDsipSettingsTableAsDict(settings.DSIP_ID))
+
+        return createApiResponse(
+            msg='Setting updated',
+            data=[clean_settings_data] if clean_settings_data else [update_dict],
+        )
+    except Exception as ex:
+        return showApiError(ex)
+
+
+@api.route("/api/v1/settings/<key>", methods=['DELETE'])
+@api_security
+def deleteSetting(key):
+    """Delete a setting (set to empty/None)"""
+    try:
+        if settings.DEBUG:
+            debugEndpoint()
+
+        # Delete the setting by setting it to empty
+        update_dict = {key: ''}
+        # Update the settings.py file and reload in memory
+        updateConfig(settings,update_dict, True)
+
+        return createApiResponse(
+            msg='Setting deleted',
+            data=[{'key': key, 'status': 'deleted'}],
+        )
+    except Exception as ex:
+        return showApiError(ex)
