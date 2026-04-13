@@ -3692,7 +3692,7 @@ function updatePermissions() {
         if id -u dsiprouter &>/dev/null; then
             # dsiprouter needs to have control over the certs to allow changes
             # note that nginx should never have write access
-            chown -R dsiprouter:kamailio ${DSIP_CERTS_DIR}
+            chown -R dsiprouter:dsiprouter ${DSIP_CERTS_DIR}
         else
             # dsiprouter user does not yet exist so make sure kamailio user has access
             chown -R root:kamailio ${DSIP_CERTS_DIR}
@@ -3729,7 +3729,7 @@ function updatePermissions() {
         # kamailio configs will contain plaintext passwords / tokens
         # in the case where the dsiprouter user does not yet exist we set stricter permissions
         if id -u dsiprouter &>/dev/null; then
-            chown -R dsiprouter:kamailio ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
+            chown -R dsiprouter:dsiprouter ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
         else
             chown -R root:kamailio ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
         fi
@@ -3763,7 +3763,7 @@ function updatePermissions() {
         chmod 770 /run/rtpengine
 
         if id -u dsiprouter &>/dev/null; then
-            chown -R dsiprouter:rtpengine ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
+            chown -R dsiprouter:dsiprouter ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
         else
             chown -R root:rtpengine ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
         fi

@@ -318,6 +318,9 @@ function install {
     userdel rtpengine &>/dev/null; groupdel rtpengine &>/dev/null
     useradd --system --user-group --shell /bin/false --comment "RTPengine RTP Proxy" rtpengine
 
+    # allow rtpengine to read configs from dsiprouter group
+    usermod -a -G dsiprouter rtpengine
+
     # reuse repo if it exists and matches version we want to install
     if [[ -d ${SRC_DIR}/rtpengine ]]; then
         if [[ "$(getGitTagFromShallowRepo ${SRC_DIR}/rtpengine)" != "${RTPENGINE_VER}" ]]; then
