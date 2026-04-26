@@ -66,7 +66,7 @@ function loadSettingsTable() {
           const safeKey = JSON.stringify(row.key);
           return `<button onclick='updateSettingValue(${safeKey})' class="btn btn-primary">Save</button>
                   <button onclick='deleteSetting(${safeKey})' class="btn btn-danger">
-                    <span class="glyphicon glyphicon-trash"></span>
+                    <i class="ti ti-trash"></i>
                   </button>`;
         }
       }

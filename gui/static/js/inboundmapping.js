@@ -58,6 +58,9 @@
     )
   }
 
+  // globals for this script
+  var routes_table = null;
+
   /* any handlers depending on DOM elems go here */
   $(document).ready(function() {
     /* only created if we have DID's */
@@ -68,7 +71,8 @@
     }
 
     /* init datatable */
-    $('#inboundmapping').DataTable({
+    routes_table = $('#inboundmapping').DataTable({
+      "autoWidth": false,
       "columnDefs": [
         {"orderable": true, "targets": [1, 2, 3, 4, 5]},
         {"orderable": false, "targets": [0, 6, 7]},
@@ -97,7 +101,7 @@
       modal_body.find("input.toggle-failfwd").bootstrapToggle('off');
     });
 
-    $('#inboundmapping').on('click', '#open-Update', function() {
+    routes_table.table().on('click', '#open-Update', function() {
       var row_index = $(this).parent().parent().parent().index() + 1;
       var c = document.getElementById('inboundmapping');
       var ruleid = $(c).find('tr:eq(' + row_index + ') td.ruleid').text();
@@ -166,7 +170,7 @@
       }
     });
 
-    $('#inboundmapping').on('click', '#open-Delete', function() {
+    routes_table.table().on('click', '#open-Delete', function() {
       var row_index = $(this).parent().parent().parent().index() + 1;
       var c = document.getElementById('inboundmapping');
       var ruleid = $(c).find('tr:eq(' + row_index + ') td:eq(1)').text();
