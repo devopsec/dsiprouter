@@ -5,6 +5,7 @@ if sys.path[0] != '/etc/dsiprouter/gui':
 from flask import Blueprint, session,render_template, request
 from modules.agents.api.routes import agents_api
 from modules.agents.db.dsip_agent import Base, dSIPAgent
+import settings
 
 agents = agents_api
 
@@ -16,7 +17,9 @@ menu_icon = "glyphicon glyphicon-user"
 description = "dSIPRouter Agents Management Module"
 version = "1.0.0"
 dsip_min_version = "0.78"
+agent_image = "dopensource/dsiprouter-voice-agent:latest"
 
+settings.OPENAI_AGENT_IMAGE = agent_image
 
 def init_db(mapper,dbengine):
 

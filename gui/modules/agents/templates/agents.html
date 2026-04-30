@@ -26,73 +26,101 @@
     <tr class='element-row'>
       <th data-field="id">ID</th>
       <th data-field="name">Name</th>
+      <th data-field="project_id">ProjectID</th>
+      <th data-field="greeting_message">Greeting Message</th>
+      <th data-field="instructions">Instructions</th>
+      <th data-field="instructions_id">Instructions ID</th>
+      <th data-field="guardrails">Guardrails</th>
+      <th data-field="training_website">Training Website</th>
+      <th data-field="tools">Tools</th>
+      <th data-field="callback_email">Callback Email</th>
       <th data-field="type">Type</th>
       <th data-field="status">Status</th>
       <th data-field="did_mapping">Assigned Inbound Route</th>
+      <th data-field="deployment_type">Deployment Type</th>
+      <th data-field="deployment_profile_id">Deployment Profile ID</th>
+      <th data-field="container_name">Container Name</th>
+      <th data-field="image_name">Image Name</th>
+      <th data-field="created_at">Created At</th>
+      <th data-field="modified_at">Modified At</th>
+      <th data-field="error">Error</th>
+      <th data-field="actions"></th>
+      <th data-field="actions"></th>
     </tr>
     </thead>
   </table>
 {% endblock %}
 
 
-<!--
-  TODO:
-    this seems to be copied directly from endpointgroups
-    there will likely be conflicts now or in the future
-    this needs to be updated
--->
 {% block edit_modal %}
 
-  <div class="modal-header">
+<div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><span
         class="glyphicon glyphicon-remove" aria-hidden="true"></span></button>
-    <h4 class="modal-title custom_align" id="Heading">Update Certificate
-      <button id="open-Delete" class="open-Delete btn btn-danger btn-xs" data-title="Delete"
-              data-toggle="modal" data-target="#delete"><span class="glyphicon glyphicon-trash"></span>
-      </button>
-    </h4>
+    <h4 class="modal-title custom_align" id="Heading">Update Agent</h4>
   </div>
-
   <div class="modal-body">
-    <form id="editCertificateForm" action="#" method="POST" role="form" enctype="multipart/form-data">
+    <form id="addAgentForm" action="#" method="POST" role="form" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="id" id="id" value=""/>
 
       <div class="form-group">
-        <input class="form-control" type="text" id="domain2" name="domain" placeholder="Domain name for the certificate"
+      <div class="radio">
+          <select class="agent_type form-control" name="agent_type" id="agent_type">
+            <option value="">Select Voice Agent API</option>
+            <option value="openai">OpenAI - Realtime</option>
+            <option value="livekit">LiveKit (Coming Soon)</option>
+          </select>
+       </div>
+      </div>
+      <div class="form-group">
+      <div class="radio">
+          <select class="project_id form-control" name="project_id" id="project_id">
+            <option value="">Select Project ID</option>
+          </select>
+       </div>
+      </div>
+      <div class="form-group">
+        <input class="agent_name form-control" type="text" id="agent_name" name="agent_name" placeholder="Agent Name" value=""
                autofocus="autofocus">
       </div>
       <div class="form-group">
-        <div id="certtypeoptions2" class="btn-group" data-toggle="buttons">
-{#          <label>#}
-{#            <input type="radio" name="certtype" id="certtype_generate2" value="generated" checked>#}
-{#            Generate#}
-{#          </label>#}
-          <label>
-            <input type="radio" name="certtype" id="certtype_upload2" value="uploaded">
-            Upload
-          </label>
+        <label for="toolchain">Select Tools for Agent </label>
+        <div class="radio">
+          <select class="toolchain form-control" multiple name="toolchain" id="toolchain">
+            <option value="tool_id_1">Request Callback</option>
+            <option value="tool_id_2">Create Quote</option>
+          </select>
         </div>
       </div>
-{#      <div id="generate2">#}
-{#        <div class="alert alert-warning pre-scrollable hide" id="terminalDiv2">#}
-{#          <strong>#}
-{#            Access this server via ssh and execute the command below. Follow the instructions and upload the certificate<br><br>#}
-{#          </strong>#}
-{#          <pre><code class="bash" id="terminalCommand2">#}
-{##}
-{#         </code></pre>#}
-{#        </div>#}
-{#      </div><!-- end of generate tab -->#}
-
-      <div id="uploaded2" class="form-group hide">
-
-        <input type="file" name="certandkey" multiple>
-
-      </div> <!-- end of upload tab -->
-
+       <div class="form-group">
+        <input class="callback_email form-control" type="text" id="callback_email" name="callback_email" placeholder="Tool Notification Email" value=""
+               autofocus="autofocus">
+      </div>
+      <div class="form-group">
+        <!-- <div class="radio">
+          <select class="predefined_instructions form-control" name="predefined_instructions" id="predefined_instructions">
+            <option value="">Select Pre-defined Agent Instructions</option>
+            <option value="instruction_1">Inbound Lead Generation</option>
+            <option value="instruction_2">Inbound Customer Support</option>
+          </select>
+       </div> -->
+          <textarea class="agent_instructions form-control" id="agent_instructions" name="agent_instructions" placeholder="Agent Instructions" rows="8">
+          </textarea>
+      </div>
+      <!--<div class="form-group">
+        <div class="radio">
+          <select class="authtype form-control" name="deployment_location">
+            <option value="">Select Deployment Location </option>
+            <option value="deployment_id_1">Local Instance</option>
+            <option value="deployment_id_2">dSIPRouter Cluster</option>
+            <option value="deployment_id_3">Kubernetes Cluster</option>
+          </select>
+        </div>
+      </div> -->
       <div class="modal-footer ">
         <button type="button" id="updateButton" class="btn btn-primary btn-lg" style="width: 100%;"><span
-            class="glyphicon glyphicon-ok-sign"></span> Update Certificate
+            class="glyphicon glyphicon-ok-sign"></span> Update
         </button>
       </div>
     </form>

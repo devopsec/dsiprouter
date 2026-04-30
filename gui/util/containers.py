@@ -2,7 +2,7 @@ import docker
 
 
 class dockerContainer:
-    def __init__(self, container_name, image_name, environment_vars=None, ports=None):
+    def __init__(self, image_name, container_name, environment_vars=None, ports=None):
         self.container_name = container_name
         self.image_name = image_name
         self.environment_vars = environment_vars or {}
@@ -13,7 +13,7 @@ class dockerContainer:
     def start(self):
         try:
             self.container = self.client.containers.run(
-                self.image_name,
+                image=self.image_name,
                 name=self.container_name,
                 environment=self.environment_vars,
                 ports=self.ports,
@@ -21,7 +21,7 @@ class dockerContainer:
             )
             print(f"Container '{self.container_name}' started successfully.")
         except docker.errors.APIError as e:
-            print(f"Error starting container '{self.container_name}': {e}")
+            print(f"Error starting image {self.image_name} for container '{self.container_name}': {e}")
 
     def stop(self):
         if self.container:
@@ -32,6 +32,16 @@ class dockerContainer:
                 print(f"Error stopping container '{self.container_name}': {e}")
         else:
             print(f"Container '{self.container_name}' is not running.") 
+
+    def restart(self):
+        if self.container:
+            try:
+                self.container.restart()
+                print(f"Container '{self.container_name}' restarted successfully.")
+            except docker.errors.APIError as e:
+                print(f"Error restarting container '{self.container_name}': {e}")
+        else:
+            print(f"Container '{self.container_name}' is not running.")
     
     @staticmethod
     def staticStatus(container_name=None):
@@ -60,4 +70,7 @@ class dockerContainer:
         else:
             return "not running"
     
+
+def normalize_container_name(name):
+    return name.lower().replace(" ", "_").replace("-", "_")
 

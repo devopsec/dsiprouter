@@ -116,6 +116,7 @@ for custom_module in glob.glob(f"{settings.DSIP_PROJECT_DIR}/gui/modules/*"):
 
 
 
+
 @app.before_first_request
 def before_first_request():
     # replace werkzeug and sqlalchemy loggers

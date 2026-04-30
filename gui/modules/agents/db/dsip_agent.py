@@ -7,6 +7,8 @@ actual DB column names where those contain hyphens.
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.sql import text
 from sqlalchemy.orm import DeclarativeBase  
+from util.containers import normalize_container_name
+import settings
 
 
 class Base(DeclarativeBase):
@@ -36,6 +38,8 @@ class dSIPAgent(Base):
     did_mapping = Column('did_mapping', String(255), nullable=False, default='')
     deployment_type = Column('deployment_type', String(255), nullable=False, default='')
     deployment_profile_id = Column('deployment_profile_id', Integer, nullable=False, default=0)
+    container_name = Column('container_name', String(255), nullable=False, default='')
+    image_name = Column('image_name', String(255), nullable=False, default='')
     created_at = Column('created_at', DateTime,
                         server_default=text('CURRENT_TIMESTAMP'),
                         server_onupdate=text('CURRENT_TIMESTAMP'))
@@ -47,7 +51,7 @@ class dSIPAgent(Base):
 
     def __init__(self, name, type, project_id, greeting_message, instructions,
                  instructions_id=0, guardrails='', tools='', callback_email='',
-                 training_website='', did_mapping='', deployment_type='', deployment_profile_id=0, status=0, error=''):
+                 training_website='', did_mapping='', deployment_type='', deployment_profile_id=0, status=0, error='', image_name=settings.VOICEAI_AGENT_IMAGE):
         self.name = name
         self.type = type
         self.project_id = project_id
@@ -60,6 +64,8 @@ class dSIPAgent(Base):
         self.training_website = training_website
         self.did_mapping = did_mapping
         self.deployment_type = deployment_type
+        self.container_name = normalize_container_name(name)
+        self.image_name = image_name
         self.deployment_profile_id = deployment_profile_id
         self.status = status
         self.error = error
@@ -85,6 +91,7 @@ class dSIPAgent(Base):
             'modified_at': getattr(self, 'modified_at', None),
             'status': self.status,
             'error': self.error,
+            'image': self.image,
         }
 
 
