@@ -104,11 +104,11 @@
   margin-top: 25px;
 }
 
-.wrap .nav-bar .navbar-right {
+.wrap .nav-bar .ml-auto {
   float: right !important;
 }
 
-.wrap .nav-bar .navbar-right .btn {
+.wrap .nav-bar .ml-auto .btn {
   margin-top: 0.5em;
 }
 
@@ -124,12 +124,12 @@
   right: 0;
 }
 
-.wrap .nav-bar .nav .dropdown-menu > li > a {
+.wrap .nav-bar .nav .dropdown-menu > .dropdown-item {
   color: #ddd;
   padding: 8px;
 }
 
-.wrap .nav-bar .nav .dropdown-menu > li > a:hover {
+.wrap .nav-bar .nav .dropdown-menu > .dropdown-item:hover {
   background: #3355ff;
 }
 
@@ -181,17 +181,24 @@
   float: left;
   display: block;
   left: 0;
-  height: 2000px;
+  min-height: 100vh;
 }
 
 .wrap .content {
-  position: absolute;
-  right: 0;
-  min-width: 400px;
+  position: relative;
+  float: right;
   -webkit-transition: all 0.3s ease-out;
   -moz-transition: all 0.3s ease-out;
   -o-transition: all 0.3s ease-out;
   transition: all 0.3s ease-out;
+  min-height: 100vh;
+  width: 100%;
+}
+
+@media screen and (min-width: 400px) {
+  .wrap .content {
+    min-width: 400px;
+  }
 }
 
 .wrap .content .top-bar {
@@ -206,8 +213,7 @@
   margin: 0;
   background: #fff;
   display: block;
-  position: absolute;
-  height: 2000px;
+  min-height: 100vh;
   width: 100%;
 }
 
@@ -258,7 +264,7 @@
   transition: all 0.4s ease;
 }
 
-.wrap ul.accordion li i.glyphicon-chevron-down {
+.wrap ul.accordion li i.ti-chevron-down {
   right: 12px;
   left: auto;
   font-size: 16px;
@@ -273,7 +279,7 @@
   color: #FF8100;
 }
 
-.wrap ul.accordion li.open i.glyphicon-chevron-down {
+.wrap ul.accordion li.open i.ti-chevron-down {
   -webkit-transform: rotate(180deg);
   -ms-transform: rotate(180deg);
   -o-transform: rotate(180deg);
@@ -312,13 +318,13 @@
   color: #ffb266;
 } */
 
-.panel-info > .panel-heading {
+.card.border-info > .card-header {
   color: #FF8100;
   background-color: #000000;
   border-color: #FF8100;
 }
 
-.panel-info {
+.card.border-info {
   border-color: #FF8100;
 }
 
@@ -350,7 +356,8 @@ a.navlink {
   width: 100%;
 }
 
-.container.container {
+.container.container,
+.container-fluid {
   width: 100%;
   height: 100%;
   margin: auto;
@@ -598,43 +605,37 @@ table.dataTable {
   z-index: 1050;
 }
 
-/* iPhone 11 */
-@media screen and (max-width: 552px) {
-  .left-half {
-    display: none;
-  }
+/* Layout breakpoints */
+/* Extra small devices (portrait phones, less than 576px) - Default styles */
 
-  .right-half {
-    width: 100%;
-  }
-
-  .col-xs-4 {
-    width: 70%;
-    display: inline-block;
-  }
-
-  /*.wrap .content .content-inner .content-section {
- margin: 0 auto;
-  }*/
-
+/* Small devices (landscape phones, 576px and up) */
+@media screen and (min-width: 576px) {
 }
 
-@media screen and (min-width: 769px) {
+/* Medium devices (tablets, 768px and up) */
+@media screen and (min-width: 768px) {
   .side-menu-link {
     display: none;
   }
 
-  .wrap {
-    position: relative;
-  }
-
   .wrap .content {
-    left: 20em;
-    right: 0;
+    width: calc(100% - 22em);
   }
 }
 
-@media screen and (max-width: 768px) {
+/* Large devices (desktops, 992px and up) */
+@media screen and (min-width: 992px) {
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
+@media screen and (min-width: 1200px) {
+}
+
+/* Specific overrides for small screens */
+@media screen and (max-width: 767.98px) {
+  .wrap .content .top-bar {
+    display: block !important;
+  }
   .wrap .nav-bar .navbar-brand {
     margin-top: 0;
     padding-left: 0;
@@ -654,7 +655,15 @@ table.dataTable {
   }
 
   .wrap.active .content {
-    left: 20em;
+    -webkit-transform: translateX(22em);
+    -moz-transform: translateX(22em);
+    -ms-transform: translateX(22em);
+    -o-transform: translateX(22em);
+    transform: translateX(22em);
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
   }
 
   .wrap.active .content #bgrOne {
@@ -677,6 +686,19 @@ table.dataTable {
     -ms-transform: rotate(315deg);
     -o-transform: rotate(315deg);
     transform: rotate(315deg);
+  }
+  
+  .left-half {
+    display: none;
+  }
+
+  .right-half {
+    width: 100%;
+  }
+
+  .col-4 {
+    width: 70%;
+    display: inline-block;
   }
 }
 

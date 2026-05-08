@@ -63,7 +63,7 @@
 
 
 # set project dir (where src files are located)
-export DSIP_PROJECT_DIR=${DSIP_PROJECT_DIR:-$(dirname $(readlink -f "$0"))}
+export DSIP_PROJECT_DIR=${DSIP_PROJECT_DIR:-/opt/dsiprouter}
 # Import dsip_lib utility / shared functions
 . ${DSIP_PROJECT_DIR}/dsiprouter/dsip_lib.sh
 
@@ -1884,7 +1884,7 @@ function installDsiprouterCli() {
     fi
 
     # add dsiprouter CLI command to the path
-    ln -sf ${DSIP_PROJECT_DIR}/dsiprouter.sh /usr/bin/dsiprouter
+    install -o root -g root -m 755 ${DSIP_PROJECT_DIR}/dsiprouter.sh /usr/bin/dsiprouter
     # add specific commands to sudoers that dsiprouter can run with escalated privileges
     cp -f ${DSIP_PROJECT_DIR}/dsiprouter/sudoers.d/99-dsiprouter ${DSIP_SUDOERS_FILE}
 
@@ -3692,7 +3692,7 @@ function updatePermissions() {
         if id -u dsiprouter &>/dev/null; then
             # dsiprouter needs to have control over the certs to allow changes
             # note that nginx should never have write access
-            chown -R dsiprouter:kamailio ${DSIP_CERTS_DIR}
+            chown -R dsiprouter:dsiprouter ${DSIP_CERTS_DIR}
         else
             # dsiprouter user does not yet exist so make sure kamailio user has access
             chown -R root:kamailio ${DSIP_CERTS_DIR}
@@ -3729,7 +3729,7 @@ function updatePermissions() {
         # kamailio configs will contain plaintext passwords / tokens
         # in the case where the dsiprouter user does not yet exist we set stricter permissions
         if id -u dsiprouter &>/dev/null; then
-            chown -R dsiprouter:kamailio ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
+            chown -R dsiprouter:dsiprouter ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
         else
             chown -R root:kamailio ${DSIP_SYSTEM_CONFIG_DIR}/kamailio/
         fi
@@ -3751,10 +3751,15 @@ function updatePermissions() {
         find ${DSIP_SYSTEM_CONFIG_DIR}/gui/ -type f -exec chmod 600 {} +
 
         # project files can only be edited by root
-        chown -R root:root ${DSIP_PROJECT_DIR}/
+        chown -R root:root "$DSIP_PROJECT_DIR/"
+        find "$DSIP_PROJECT_DIR" -type d -exec chmod 755 {} +
+        find "$DSIP_PROJECT_DIR" -type f -exec chmod 644 {} +
         # files that should be executable
-        chmod +x ${DSIP_PROJECT_DIR}/dsiprouter.sh
-        chmod +x ${DSIP_PROJECT_DIR}/resources/upgrade/*/scripts/migrate.sh
+        find "$DSIP_PROJECT_DIR" -type f \( -name '*.sh' -o -name '*.py' \) \
+            -not -path "$DSIP_PROJECT_DIR/venv/*" \
+            -not -path "$DSIP_PROJECT_DIR/.venv/*" \
+            -exec awk 'FNR==1 && /^#!/ {printf "%s\0", FILENAME; nextfile}' {} + |
+            xargs -0 chmod 755
     }
     # set permissions for files/dirs used by rtpengine
     setRtpenginePerms() {
@@ -3763,7 +3768,7 @@ function updatePermissions() {
         chmod 770 /run/rtpengine
 
         if id -u dsiprouter &>/dev/null; then
-            chown -R dsiprouter:rtpengine ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
+            chown -R dsiprouter:dsiprouter ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
         else
             chown -R root:rtpengine ${DSIP_SYSTEM_CONFIG_DIR}/rtpengine/
         fi

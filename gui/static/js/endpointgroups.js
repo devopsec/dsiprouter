@@ -248,7 +248,7 @@
         }
 
         btn.addClass("btn-success");
-        btn.html("<span class='glyphicon glyphicon-check'></span> Saved!");
+        btn.html("<i class='ti ti-check'></i> Saved!");
         btn.attr("disabled", true);
 
         // Update Reload buttons
@@ -314,13 +314,13 @@
     var btn;
     if (modal_selector == "#add") {
       btn = $('#add .modal-footer').find('#addButton');
-      btn.html("<span class='glyphicon glyphicon-ok-sign'></span> Add");
+      btn.html("<i class='ti ti-circle-check'></i> Add");
       btn.removeClass("btn-success");
       btn.addClass("btn-primary");
     }
     else {
       btn = $('#edit .modal-footer').find('#updateButton');
-      btn.html("<span class='glyphicon glyphicon-ok-sign'></span> Update");
+      btn.html("<i class='ti ti-circle-check'></i> Update");
       btn.removeClass("btn-success");
       btn.addClass("btn-warning");
     }
@@ -390,7 +390,7 @@
     var updatebtn = $('#edit .modal-footer').find("#updateButton");
     updatebtn.removeClass("btn-success");
     updatebtn.addClass("btn-warning");
-    updatebtn.html("<span class='glyphicon glyphicon-ok-sign'></span>Update");
+    updatebtn.html("<i class='ti ti-circle-check'></i>Update");
 
     if (gwgroup_data.endpoints) {
       for (var i = 0; i < gwgroup_data.endpoints.length; i++) {
@@ -441,6 +441,7 @@
   $(document).ready(function() {
     // datatable init
     gwgroup_table = $('#endpointgroups').DataTable({
+      "autoWidth": false,
       "ajax": {
         "url": API_BASE_URL + "endpointgroups"
       },
@@ -558,13 +559,13 @@
       var input = $($(this).attr("toggle"));
       if (input.attr("type") == "password") {
         input.attr("type", "text");
-        $(this).removeClass("glyphicon glyphicon-eye-close");
-        $(this).addClass("glyphicon glyphicon-eye-open");
+        $(this).removeClass("ti-eye-off");
+        $(this).addClass("ti-eye");
       }
       else {
         input.attr("type", "password");
-        $(this).removeClass("glyphicon glyphicon-eye-open");
-        $(this).addClass("glyphicon glyphicon-eye-close");
+        $(this).removeClass("ti-eye");
+        $(this).addClass("ti-eye-off");
       }
     });
 
@@ -585,8 +586,8 @@
           success: function(response, textStatus, jqXHR) {
             authpwd_inp.attr("type", "text");
             authpwd_inp.val(response.data[0])
-            togglepwd_span.removeClass("glyphicon glyphicon-eye-close");
-            togglepwd_span.addClass("glyphicon glyphicon-eye-open");
+            togglepwd_span.removeClass("ti-eye-off");
+            togglepwd_span.addClass("ti-eye");
           }
         });
 

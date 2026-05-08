@@ -145,7 +145,7 @@
         }
 
         btn.addClass("btn-success");
-        btn.html("<span class='glyphicon glyphicon-check'></span> Saved!");
+        btn.html("<i class='ti ti-check'></i> Saved!");
         btn.attr("disabled", true);
 
         if (action === "POST") {
@@ -541,6 +541,7 @@
 
     /* DataTable init */
     $('#carrier-groups').DataTable({
+      "autoWidth": false,
       "columnDefs": [
         {"orderable": true, "targets": [1, 2, 3]},
         {"orderable": false, "targets": [0, 4, 5, 6, 7, 8, 9, 10, 11]},

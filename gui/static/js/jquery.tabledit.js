@@ -52,13 +52,13 @@ if (typeof jQuery === 'undefined') {
             restoreButton: true,
             buttons: {
                 edit: {
-                    class: 'btn btn-sm btn-default',
-                    html: '<span class="glyphicon glyphicon-pencil"></span>',
+                    class: 'btn btn-sm btn-secondary',
+                    html: '<i class="ti ti-pencil"></i>',
                     action: 'edit'
                 },
                 delete: {
-                    class: 'btn btn-sm btn-default',
-                    html: '<span class="glyphicon glyphicon-trash"></span>',
+                    class: 'btn btn-sm btn-secondary',
+                    html: '<i class="ti ti-trash"></i>',
                     action: 'delete'
                 },
                 save: {
