@@ -91,7 +91,7 @@ def addDomain(domain, authtype, pbxs, notes, db):
                 dispatcher = Dispatcher(
                     setid=PBXDomain.id,
                     destination=sipuri,
-                    attrs=f'socket=tls:{socket_addr}:5061;ping_from=sip:{domain}',
+                    attrs=f'ping_from=sip:{domain}',
                     flags=Dispatcher.FLAGS['KEEP_ALIVE'],
                     name=hostname
                 )

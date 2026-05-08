@@ -19,7 +19,8 @@
 
 	var ENTITY="agents";
   var id;
-	var table;
+  var agents_table;
+  var url = CUSTOM_MODULE_API_BASE_URL + ENTITY + "/v1/agent";
 
 
   function clear(modal_selector) {
@@ -60,18 +61,19 @@
 			action = "POST";
 			selector = "#add";
 			modal_body = $(selector + ' .modal-body');
-      //requestPayload.domain = modal_body.find("#domain").val()
 
 		}
     else if (action === "PUT") {
 			action = "PUT";
 			selector = "#edit";
 			modal_body = $(selector + ' .modal-body');
-      requestPayload.domain = modal_body.find("#domain2").val()
+      // Set the ID in the payload and append to URL for PUT request
+      requestPayload.id = modal_body.find("input#id").val()
+      url = url + "/" + requestPayload.id;
 
 		}
 
-    var requestPayload = {};
+   
     requestPayload.type= modal_body.find("select#agent_type").val();
     requestPayload.project_id = modal_body.find("select#project_id").val();
     requestPayload.name = modal_body.find("input#agent_name").val();
@@ -154,23 +156,24 @@
 }
 
 
-function deleteEntity() {
+function deleteEntity(id) {
     var id_int = parseInt(id, 10);
+   
 
     $.ajax({
       type: "DELETE",
-      url: API_BASE_URL + ENTITY + "/" + id,
+      url: url + "/" + id,
       dataType: "json",
       contentType: "application/json; charset=utf-8",
       success: function(response, textStatus, jqXHR) {
         $('#delete').modal('hide');
         $('#edit').modal('hide');
-        table.row(function (idx, data, node) {
+        agents_table.row(function (idx, data, node) {
             //return data.id === id_int;
-            return data.domain === id;
+            return data.id === id_int;
         }).remove().draw();
 
-        showNotification("Certificate was deleted");
+        showNotification("Agent " + id + " was deleted");
       }
     });
   }
@@ -181,7 +184,7 @@ function deleteEntity() {
     var url = CUSTOM_MODULE_API_BASE_URL + "agents/v1/agent";
 
 		// datatable init
-		table = $('#' + ENTITY + "_table").DataTable({
+		agents_table = $('#' + ENTITY + "_table").DataTable({
 			"ajax": {
 				"url": url
 			},
@@ -189,19 +192,124 @@ function deleteEntity() {
 				{"data": "id"},
 				{"data": "name"},
 				{"data": "type"},
+        {"data": "project_id", "visible": false},
+        {"data": "greeting_message", "visible": false},
+        {"data": "instructions", "visible": false},
+        {"data": "instructions_id", "visible": false},
+        {"data": "guardrails", "visible": false},
+        {"data": "training_website", "visible": false},
+        {"data": "tools", "visible": false},
+        {"data": "callback_email", "visible": false},
 				{"data": null, render: function(data, type, row) {
           if (data.status === "0") {
-            return "Stopped <button class='btn btn-success btn-sm agent_stopped'><i class='ti ti-player-play'></i></button>";
+
+            return "Stopped <button class='agentStatus btn btn.dataset.container=" + data.container_name + " btn-success btn-xs agent_stopped' id='agentStatus'><span class='glyphicon glyphicon-play'></span></button>";
           }
           else if (data.status === "1") {
-            return "Started <button class='btn btn-warning btn-sm agent_started'><i class='ti ti-player-stop'></i></button>";
+            return "Started <button class='agentStatus btn btn.dataset.container=" + data.container_name + " btn-danger btn-xs agent_started' id='agentStatus'><span class='glyphicon glyphicon-stop'></span></button>";
+
           }
          }
         },
         {"data": "did_mapping"},
+        {"data": "deployment_type", "visible": false},
+        {"data": "deployment_profile_id", "visible": false},
+        {"data": "container_name", "visible": false},
+        {"data": "image_name", "visible": false},
+        {"data": "created_at", "visible": false},
+        {"data": "modified_at", "visible": false},
+        {"data": "error", "visible": false},
+        {"data": null,
+          render: function (data, type, row) {
+          return `<button id="open-Update" class="open-Update btn btn-primary btn-xs" data-title="Edit" data-toggle="modal"
+          data-target="#edit"><span class="glyphicon glyphicon-pencil"></span></button>`;
+          }
+        },
+        {"data": null,
+          render: function (data, type, row) {
+          return `<button id="open-Delete" class="open-Delete btn btn-danger btn-xs" data-title="Delete" data-toggle="modal"
+          data-target="#delete"><span class="glyphicon glyphicon-trash"></span></button>`;
+          }
+        },
+
 			],
 			"order": [[1, 'asc']]
 		});
+
+    // handlers for dynamically created edit/delete buttons
+    $('#' + ENTITY + "_table tbody").on('click', 'button.open-Update', function() {
+      clear('#edit');
+      var data = agents_table.row($(this).parents('tr')).data();
+      var edit_modal_body = $('#edit .modal-body');
+      var agent_type_select = edit_modal_body.find('select#agent_type');
+      var project_select = edit_modal_body.find('select#project_id');
+
+      function setSelectValue($select, value) {
+        if (!value) {
+          $select.val('');
+          return;
+        }
+
+        if ($select.find("option[value='" + value + "']").length === 0) {
+          $select.append($('<option></option>').val(value).text(value));
+        }
+        $select.val(value);
+      }
+
+      agent_type_select.val(data.type || '');
+
+      // Load projects for the selected agent type before setting project_id.
+      if ((data.type || '') === 'openai') {
+        fetch('/api/agents/v1/projects/' + data.type)
+          .then(response => response.json())
+          .then(results => {
+            project_select.html("<option value=''>Select Project ID</option>");
+            results.data.forEach(project => {
+              var option = document.createElement('option');
+              option.value = project.id;
+              option.textContent = project.name + ' - ' + project.id;
+              project_select.append(option);
+            });
+            setSelectValue(project_select, data.project_id || '');
+          })
+          .catch(() => {
+            setSelectValue(project_select, data.project_id || '');
+          });
+      }
+      else {
+        project_select.html("<option value=''>Select Project ID</option>");
+        setSelectValue(project_select, data.project_id || '');
+      }
+      edit_modal_body.find('input#id').val(data.id || '');
+      edit_modal_body.find('input#agent_name').val(data.name || '');
+      edit_modal_body.find('select#predefined_instructions').val(data.instructions_id || '');
+      edit_modal_body.find('select#toolchain').val(data.tools || []);
+      edit_modal_body.find('input#callback_email').val(data.callback_email || '');
+      edit_modal_body.find('textarea#agent_instructions').val(data.instructions || '');
+    });
+
+
+    // Status toggle handler
+    $('#' + ENTITY + "_table tbody").on('click', 'button.agentStatus', function() {
+      //e.stopPropagation();
+      var data = agents_table.row($(this).parents('tr')).data();
+      var agent_id = data.id;
+      var action = $(this).hasClass("agent_stopped") ? "start" : "stop";
+      $.ajax({
+        type: "PUT",
+        url: url + "/" + agent_id + "/" + action,
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        data: JSON.stringify({"agent_id": agent_id}),
+        success: function(response, textStatus, jqXHR) {
+          showNotification("Agent " + action + "ed successfully");
+          agents_table.ajax.reload(null, false);
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+          showNotification("Failed to " + action + " agent", true);
+        }
+      });
+    });
 
 		// table editing by clicking on the row
 		$('#' + ENTITY + ' tbody').on('click', 'tr', function() {
@@ -261,8 +369,13 @@ $('#open-Add').click(function() {
 $('#addButton').click(function() {
 		if (validateFields('#add')) {
 			addEntity('POST');
-      clear('#add_webhook_info');
-      $('#add_webhook_info').dialog('open');
+      // hide the modal after 1.5 sec
+      setTimeout(function() {
+        var add_modal = $('#add');
+        if (add_modal.is(':visible')) {
+          add_modal.modal('hide');
+        }
+      }, 1500);
 
 		}
 });
@@ -270,56 +383,34 @@ $('#addButton').click(function() {
 $('#updateButton').click(function() {
 		if (validateFields('#edit')) {
 			addEntity('PUT');
+      // hide the modal after 1.5 sec
+      setTimeout(function() {
+        var edit_modal = $('#edit');
+        if (edit_modal.is(':visible')) {
+          edit_modal.modal('hide');
+        }
+      }, 1500);
 		}
 });
 
 /* handler for deleting endpoint group */
-$('#deleteButton').click(function() {
-  deleteEntity();
-});
+$('#deleteButton').click(function(ev) {
+      var selector, modal_body, id;
+      /* prevent form default submit */
+      ev.preventDefault();
 
-
-
-
-
-
-$('#add').on('show.bs.modal', function() {
-	
-	$("#replace_default_cert").attr('checked',true);
-	$("#replace_default_cert").trigger("change");
-	$("#certtype_upload").trigger("change");
-})
-
-
-$('#edit').on('show.bs.modal', function() {
-  clear('#edit');
-
-  // Show the auth tab by default when the modal shows
-  var modal_body = $('#edit .modal-body');
-
-  // Put into JSON Message and send over
-  $.ajax({
-    type: "GET",
-    url: API_BASE_URL + ENTITY + "/" + id,
-    dataType: "json",
-    contentType: "application/json; charset=utf-8",
-    success: function(response, textStatus, jqXHR) {
-
-      modal_body.find("#domain2").val(response.data[0].domain)
-      if (response.data[0].type == "generated") {
-        modal_body.find("#certtype_generate2").prop('checked', true);
+      selector = "#delete";
+      modal_body = $(selector + ' .modal-body');
+      id = modal_body.find("input#id").val();
+      if (id) {
+        deleteEntity(id);
       }
-      else if (response.data[0].type == "uploaded") {
-        modal_body.find("#certtype_upload2").prop('checked', true);
-        $("#uploaded2").removeClass("hide");
+      else {
+        bulkDelete();
+      }
+    })
 
-      }
-    },
-      error: function(response, text_status, error_msg) {
-        showNotification("Could not obtain certificate", true);
-      }
-  })
-});
+
 
 $(document).ajaxStart(function(){
   // Show image container
@@ -339,35 +430,40 @@ $(".close").click(function () {
 	$("#certtype_generate").prop('selected', true);
 })
 
-$(".agent_type").change(function () {
+$(document).on('change', 'select.agent_type', function () {
+  var modal_body = $(this).closest('.modal-body');
+  var selected_type = $(this).val();
+  var project_select = modal_body.find('select.project_id');
 
-  if ($(".agent_type").val() == "openai") {
-
-    // Get List of Projects for the provider and populate the project_id dropdown
-      fetch('/api/agents/v1/projects/' + $(".agent_type").val())
-        .then(response => response.json())
-        .then(results => {
-          var project_select = document.querySelector(".project_id");
-          project_select.innerHTML = "<option value=''>Select Project ID</option>";
-          results.data.forEach(project => {
-            var option = document.createElement("option");
-            option.value = project.id;
-            option.textContent = project.name + " - " + project.id;
-            project_select.appendChild(option);
-          });
-    })
+  if (selected_type === 'openai') {
+    // Populate the project list only for the modal where the change happened.
+    fetch('/api/agents/v1/projects/' + selected_type)
+      .then(response => response.json())
+      .then(results => {
+        project_select.html("<option value=''>Select Project ID</option>");
+        results.data.forEach(project => {
+          var option = document.createElement('option');
+          option.value = project.id;
+          option.textContent = project.name + ' - ' + project.id;
+          project_select.append(option);
+        });
+      });
   }
   else {
-    var project_select = document.querySelector(".project_id");
-    project_select.innerHTML = "<option value=''>Select Project ID</option>";
-  } 
+    project_select.html("<option value=''>Select Project ID</option>");
+  }
+});
 
-})
+$(document).on('change', 'select.project_id', function () {
+  var modal_body = $(this).closest('.modal-body');
+  var selected_text = $(this).find('option:selected').text();
 
-$(".project_id").change(function () {
-
-  $(".agent_name").val($(".project_id").find("option:selected").text() + " " + "agent");
-
+  if ($(this).val()) {
+    modal_body.find('input.agent_name').val(selected_text + ' agent');
+  }
+  else {
+    modal_body.find('input.agent_name').val('');
+  }
 });
 
 

@@ -1,3 +1,4 @@
+from email.mime import image
 import sys, os
 
 import requests
@@ -13,7 +14,7 @@ from modules.agents.db.dsip_agent import dSIPAgentInstruction as dSIPAgentInstru
 from sqlalchemy import exc as sql_exceptions
 from werkzeug import exceptions as http_exceptions
 from flask import render_template
-from util.containers import dockerContainer
+from util.containers import dockerContainer, normalize_container_name
 import settings
 
 # Setup some reusable variables and functions for the module
@@ -23,18 +24,34 @@ OPENAI_BASE_URL = settings.OPENAI_BASE_URL if hasattr(settings, 'OPENAI_BASE_URL
 agents_api = numbers_api = Blueprint('agents', __name__, template_folder='../templates', static_folder='../static', static_url_path='/agents/static')
 
 class VoiceAgentContainer(dockerContainer):
-    def __init__(self, agent_name, agent_instructions=None, agent_api_key=None, webhook_secret=None, tools_api_keys=None, callback_email=None, greeting_message=None):
+    def __init__(self, agent_name, image_name=None,container_name=None, agent_instructions=None, agent_api_key=None, webhook_secret=None, tools_api_keys=None, callback_email=None, greeting_message=None):
         self.agent_name = agent_name
+        self.image_name = image_name or settings.VOICEAI_AGENT_IMAGE
+        self.container_name = container_name
         self.agent_instructions = agent_instructions
         self.agent_api_key = agent_api_key
         self.webhook_secret = webhook_secret
         self.tools_api_keys = tools_api_keys
         self.callback_email = callback_email
         self.greeting_message = greeting_message
+
+        env = {
+            'AGENT_NAME': self.agent_name, 
+            'AGENT_INSTRUCTIONS': self.agent_instructions or '',
+            'AGENT_API_KEY': self.agent_api_key or '',
+            'WEBHOOK_SECRET': self.webhook_secret or '',
+            'TOOLS_API_KEYS': self.tools_api_keys or '',
+            'CALLBACK_EMAIL': self.callback_email or '',
+            'GREETING_MESSAGE': self.greeting_message or ''
+            }
         
+        dockerContainer.__init__(self, image_name=self.image_name, container_name=container_name or normalize_container_name(self.agent_name), environment_vars=env)
+
+
     def to_dict(self):
         return {
             'agent_name': self.agent_name,
+            'image_name' : self.image_name,
             'agent_instructions': self.agent_instructions,
             'agent_api_key': self.agent_api_key,
             'webhook_secret': self.webhook_secret,
@@ -43,20 +60,32 @@ class VoiceAgentContainer(dockerContainer):
             'greeting_message': self.greeting_message
         }
     
-    def start(self,name):
+    def start(self):
         # Placeholder for starting the agent
         print(f"Starting agent: {self.agent_name}")
-        # Here you would add the logic to initialize and start the agent based on its configuration
-        # 
+        try:
+            super().start()
+            return True
+        except Exception as e:
+            print(f"Error starting agent {self.agent_name}: {e}")
+            return False
+        
     
-    def restart(self,name):
+    def restart(self):
         # Placeholder for restarting the agent
         print(f"Restarting agent: {self.agent_name}")
         # Here you would add the logic to gracefully restart the agent, which may involve stopping it first and then starting it again
     
-    def stop(self,name):
+    def stop(self):
         # Placeholder for stopping the agent
         print(f"Stopping agent: {self.agent_name}")
+        try:
+            super().stop()
+            
+            return True
+        except Exception as e:
+            print(f"Error stopping agent {self.agent_name}: {e}")
+            return False
         # Here you would add the logic to gracefully stop the agent and clean up resources   
 
     
@@ -147,6 +176,7 @@ def create_agent():
             did_mapping=mapped.get('did_mapping', ''),
             deployment_type=mapped.get('deployment_type', ''),
             deployment_profile_id=int(mapped.get('deployment_profile_id', 0)),
+            image_name=mapped.get('image_name', settings.VOICEAI_AGENT_IMAGE) if 'image_name' in mapped else settings.VOICEAI_AGENT_IMAGE
         )
 
         db.add(agent)
@@ -162,7 +192,7 @@ def create_agent():
         db.close()
 
 
-@agents_api.route('/api/agents/v1/<int:agent_id>', methods=['PUT'])
+@agents_api.route('/api/agents/v1/agent/<int:agent_id>', methods=['PUT'])
 @api_security
 def update_agent(agent_id):
     db = DummySession()
@@ -186,6 +216,72 @@ def update_agent(agent_id):
         db.commit()
 
         return createApiResponse(msg='Agent updated', data=[rowToDict(agent)])
+    except Exception as ex:
+        db.rollback()
+        db.flush()
+        return showApiError(ex)
+    finally:
+        db.close()
+
+
+@agents_api.route('/api/agents/v1/agent/<int:agent_id>/<string:control>', methods=['PUT'])
+@api_security
+def control_agent(agent_id, control):
+    db = DummySession()
+    try:
+        db = startSession()
+        payload = getRequestData()
+        mapped = _map_payload_to_agent(payload)
+
+        agent = db.query(dSIPAgent).filter(dSIPAgent.id == agent_id).first()
+        if agent is None:
+            raise http_exceptions.NotFound('Agent not found')
+
+        # update fields
+        #for k, v in mapped.items():
+        #    # map keys to attribute names on the model
+        #    if hasattr(agent, k):
+        #        setattr(agent, k, v)
+
+        # Handle control actions
+        if control == 'start':
+            # Placeholder for starting the agent
+            print(f"Starting agent: {agent.name}")
+            va = VoiceAgentContainer(agent_name=agent.name, container_name=agent.container_name, image_name=agent.image_name, agent_instructions=agent.instructions, tools_api_keys=agent.tools, callback_email=agent.callback_email, greeting_message=agent.greeting_message)
+            if va.start():
+                agent.status = 1
+                db.add(agent)
+                db.flush()
+                db.commit()
+            # Here you would add the logic to initialize and start the agent based on its configuration   
+        elif control == 'stop':
+            # Placeholder for stopping the agent
+            print(f"Stopping agent: {agent.name}")
+            va = VoiceAgentContainer(agent_name=agent.name, container_name=agent.container_name, image_name=agent.image_name, agent_instructions=agent.instructions, tools_api_keys=agent.tools, callback_email=agent.callback_email, greeting_message=agent.greeting_message)
+            if va.stop():
+                agent.status = 0
+                db.add(agent)
+                db.flush()
+                db.commit()
+        elif control == 'restart':
+            # Placeholder for restarting the agent
+            print(f"Restarting agent: {agent.name}")
+            va = VoiceAgentContainer(agent_name=agent.name, container_name=agent.container_name, image_name=agent.image_name, agent_instructions=agent.instructions, tools_api_keys=agent.tools, callback_email=agent.callback_email, greeting_message=agent.greeting_message).restart(agent.name) 
+            if va.restart():
+                agent.status = 1
+                db.add(agent)
+                db.flush()
+                db.commit()
+            # Here you would add the logic to gracefully restart the agent, which may involve stopping it first and then starting it again
+        else:
+            raise http_exceptions.BadRequest('Invalid control action')  
+             
+
+        db.add(agent)
+        db.flush()
+        db.commit()
+
+        return createApiResponse(msg='Agent Started', data="")
     except Exception as ex:
         db.rollback()
         db.flush()
