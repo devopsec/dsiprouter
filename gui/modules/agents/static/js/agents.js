@@ -367,8 +367,13 @@ $('#open-Add').click(function() {
 $('#addButton').click(function() {
 		if (validateFields('#add')) {
 			addEntity('POST');
-      clear('#add_webhook_info');
-      $('#add_webhook_info').dialog('open');
+      // hide the modal after 1.5 sec
+      setTimeout(function() {
+        var add_modal = $('#add');
+        if (add_modal.is(':visible')) {
+          add_modal.modal('hide');
+        }
+      }, 1500);
 
 		}
 });
@@ -376,6 +381,13 @@ $('#addButton').click(function() {
 $('#updateButton').click(function() {
 		if (validateFields('#edit')) {
 			addEntity('PUT');
+      // hide the modal after 1.5 sec
+      setTimeout(function() {
+        var edit_modal = $('#edit');
+        if (edit_modal.is(':visible')) {
+          edit_modal.modal('hide');
+        }
+      }, 1500);
 		}
 });
 
@@ -416,35 +428,40 @@ $(".close").click(function () {
 	$("#certtype_generate").prop('selected', true);
 })
 
-$(".agent_type").change(function () {
+$(document).on('change', 'select.agent_type', function () {
+  var modal_body = $(this).closest('.modal-body');
+  var selected_type = $(this).val();
+  var project_select = modal_body.find('select.project_id');
 
-  if ($(".agent_type").val() == "openai") {
-
-    // Get List of Projects for the provider and populate the project_id dropdown
-      fetch('/api/agents/v1/projects/' + $(".agent_type").val())
-        .then(response => response.json())
-        .then(results => {
-          var project_select = document.querySelector(".project_id");
-          project_select.innerHTML = "<option value=''>Select Project ID</option>";
-          results.data.forEach(project => {
-            var option = document.createElement("option");
-            option.value = project.id;
-            option.textContent = project.name + " - " + project.id;
-            project_select.appendChild(option);
-          });
-    })
+  if (selected_type === 'openai') {
+    // Populate the project list only for the modal where the change happened.
+    fetch('/api/agents/v1/projects/' + selected_type)
+      .then(response => response.json())
+      .then(results => {
+        project_select.html("<option value=''>Select Project ID</option>");
+        results.data.forEach(project => {
+          var option = document.createElement('option');
+          option.value = project.id;
+          option.textContent = project.name + ' - ' + project.id;
+          project_select.append(option);
+        });
+      });
   }
   else {
-    var project_select = document.querySelector(".project_id");
-    project_select.innerHTML = "<option value=''>Select Project ID</option>";
-  } 
+    project_select.html("<option value=''>Select Project ID</option>");
+  }
+});
 
-})
+$(document).on('change', 'select.project_id', function () {
+  var modal_body = $(this).closest('.modal-body');
+  var selected_text = $(this).find('option:selected').text();
 
-$(".project_id").change(function () {
-
-  $(".agent_name").val($(".project_id").find("option:selected").text() + " " + "agent");
-
+  if ($(this).val()) {
+    modal_body.find('input.agent_name').val(selected_text + ' agent');
+  }
+  else {
+    modal_body.find('input.agent_name').val('');
+  }
 });
 
 
