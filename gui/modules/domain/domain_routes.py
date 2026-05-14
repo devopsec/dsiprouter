@@ -123,7 +123,7 @@ def addDomain(domain, authtype, pbxs, notes, db):
                 db.add(Addr)
             hostname="{}:{};{}".format(hostname,"5061","transport=tls")
             endpoints.append({"host": hostname, "description": "msteams_endpoint", "maintmode": False, 
-            'keepalive': '1'})
+            'keepalive': '1','signalling':'sips_tls','media':'rtp_savp'})
 
         endpointGroup['endpoints'] = endpoints
         addEndpointGroups(endpointGroup, "msteams", domain)
