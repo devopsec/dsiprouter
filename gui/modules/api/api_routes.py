@@ -1560,7 +1560,10 @@ def updateEndpointGroups(gwgroupid=None):
             ep_gateway.address = sip_addr
             ep_gateway.strip = strip
             ep_gateway.pri_prefix = prefix
-            ep_gateway.attrs = Gateways.buildAttrs(gwid=gwid, type=current_endpoint['type'], signalling=signalling, media=media)
+            # Check if the Endpoint Group was created by the  MSTeams Domain Logic
+            if "pstnhub.microsoft.com" in ep_gateway.address:
+                msteams_domain = gwgroup_desc_dict['name']
+            ep_gateway.attrs = Gateways.buildAttrs(gwid=gwid, type=current_endpoint['type'], signalling=signalling, media=media,msteams_domain=msteams_domain)
 
             gwlist.append(gwid)
 
